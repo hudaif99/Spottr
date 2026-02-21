@@ -19,10 +19,32 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     on<CancelWorkout>(_onCancelWorkout);
   }
 
-  void _onStartWorkout(StartWorkout event, Emitter<WorkoutState> emit) {
+  Future<void> _onStartWorkout(
+    StartWorkout event,
+    Emitter<WorkoutState> emit,
+  ) async {
     final Map<String, List<SetLog>> initialLogs = {};
     for (var exercise in event.day.exercises) {
       initialLogs[exercise.id] = [];
+    }
+
+    final Map<String, List<SetLog>> previousExerciseLogs = {};
+    try {
+      final allLogs = await _repository.getWorkoutLogs();
+      // Sort by date descending
+      allLogs.sort((a, b) => b.startTime.compareTo(a.startTime));
+
+      for (var exercise in event.day.exercises) {
+        for (var log in allLogs) {
+          if (log.exerciseLogs.containsKey(exercise.id) &&
+              log.exerciseLogs[exercise.id]!.isNotEmpty) {
+            previousExerciseLogs[exercise.id] = log.exerciseLogs[exercise.id]!;
+            break; // Found the most recent logs for this exercise
+          }
+        }
+      }
+    } catch (_) {
+      // Ignore errors fetching previous logs
     }
 
     emit(
@@ -32,6 +54,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         day: event.day,
         startTime: DateTime.now(),
         exerciseLogs: initialLogs,
+        previousExerciseLogs: previousExerciseLogs,
       ),
     );
   }

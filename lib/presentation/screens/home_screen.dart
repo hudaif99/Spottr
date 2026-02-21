@@ -9,6 +9,10 @@ import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_state.dart';
 import '../blocs/workout/workout_bloc.dart';
 import '../blocs/workout/workout_event.dart';
+import '../blocs/workout/workout_state.dart';
+import '../blocs/history/history_bloc.dart';
+import '../blocs/history/history_event.dart' as he;
+import '../blocs/history/history_state.dart';
 import 'plan_management_screen.dart';
 import 'active_workout_screen.dart';
 import 'settings_screen.dart';
@@ -43,47 +47,54 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome / Date
-              Text(
-                _getFormattedDate(),
-                style: AppTypography.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.secondaryText,
+      body: BlocListener<WorkoutBloc, WorkoutState>(
+        listener: (context, state) {
+          if (state is WorkoutInitial) {
+            context.read<HistoryBloc>().add(he.LoadHistory());
+          }
+        },
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Welcome / Date
+                Text(
+                  _getFormattedDate(),
+                  style: AppTypography.textTheme.bodyMedium?.copyWith(
+                    color: AppColors.secondaryText,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Ready to crush it?',
-                style: AppTypography.textTheme.displaySmall,
-              ),
-              const SizedBox(height: 32),
+                const SizedBox(height: 8),
+                Text(
+                  'Ready to crush it?',
+                  style: AppTypography.textTheme.displaySmall,
+                ),
+                const SizedBox(height: 32),
 
-              // Active Plan Section
-              BlocBuilder<PlansBloc, PlansState>(
-                builder: (context, state) {
-                  Plan? activePlan;
-                  if (state is PlansLoaded) {
-                    activePlan = state.activePlan;
-                  }
-                  return _buildActivePlanSection(context, activePlan);
-                },
-              ),
+                // Active Plan Section
+                BlocBuilder<PlansBloc, PlansState>(
+                  builder: (context, state) {
+                    Plan? activePlan;
+                    if (state is PlansLoaded) {
+                      activePlan = state.activePlan;
+                    }
+                    return _buildActivePlanSection(context, activePlan);
+                  },
+                ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-              // Weekly Volume / Stats
-              _buildWeeklyStatsSection(),
+                // Weekly Volume / Stats
+                _buildWeeklyStatsSection(),
 
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              // Quick Access
-              _buildQuickAccess(context),
-            ],
+                // Quick Access
+                _buildQuickAccess(context),
+              ],
+            ),
           ),
         ),
       ),
@@ -219,43 +230,76 @@ class HomeScreen extends StatelessWidget {
       children: [
         Text('Weekly Summary', style: AppTypography.textTheme.titleLarge),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: VoltCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Workouts', style: AppTypography.textTheme.bodyMedium),
-                    const SizedBox(height: 8),
-                    Text(
-                      '3 / 5',
-                      style: AppTypography.textTheme.headlineMedium?.copyWith(
-                        color: AppColors.primaryAccent,
-                      ),
+        BlocBuilder<HistoryBloc, HistoryState>(
+          builder: (context, state) {
+            int weeklyWorkouts = 0;
+            double weeklyVolume = 0;
+
+            if (state is HistoryLoaded) {
+              final now = DateTime.now();
+              // Calculate start of the week (Monday)
+              final startOfWeek = DateTime(
+                now.year,
+                now.month,
+                now.day,
+              ).subtract(Duration(days: now.weekday - 1));
+
+              final weeklyLogs = state.logs
+                  .where((log) => log.startTime.isAfter(startOfWeek))
+                  .toList();
+              weeklyWorkouts = weeklyLogs.length;
+              weeklyVolume = weeklyLogs.fold(
+                0.0,
+                (sum, log) => sum + log.totalVolume,
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(
+                  child: VoltCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Workouts',
+                          style: AppTypography.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '$weeklyWorkouts',
+                          style: AppTypography.textTheme.headlineMedium
+                              ?.copyWith(color: AppColors.primaryAccent),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: VoltCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Volume', style: AppTypography.textTheme.bodyMedium),
-                    const SizedBox(height: 8),
-                    Text(
-                      '12.4k kg',
-                      style: AppTypography.textTheme.headlineMedium?.copyWith(
-                        color: AppColors.secondaryAccent,
-                      ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: VoltCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Volume',
+                          style: AppTypography.textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          weeklyVolume > 1000
+                              ? '${(weeklyVolume / 1000).toStringAsFixed(1)}k kg'
+                              : '${weeklyVolume.toStringAsFixed(0)} kg',
+                          style: AppTypography.textTheme.headlineMedium
+                              ?.copyWith(color: AppColors.secondaryAccent),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
       ],
     );
@@ -303,6 +347,7 @@ class HomeScreen extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(height: 12),
         VoltCard(
           onTap: () {
             Navigator.of(

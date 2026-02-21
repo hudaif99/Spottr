@@ -4,6 +4,7 @@ import '../../data/repositories/workout_repository_impl.dart';
 import '../../presentation/blocs/plans/plans_bloc.dart';
 import '../../presentation/blocs/workout/workout_bloc.dart';
 import '../../presentation/blocs/timer/timer_bloc.dart';
+import '../../presentation/blocs/history/history_bloc.dart';
 import '../../domain/repositories/workout_repository.dart';
 
 final sl = GetIt.instance;
@@ -23,4 +24,5 @@ Future<void> initDI() async {
   sl.registerFactory(() => PlansBloc(sl()));
   sl.registerFactory(() => WorkoutBloc(sl()));
   sl.registerFactory(() => TimerBloc());
+  sl.registerFactory(() => HistoryBloc(sl()));
 }

@@ -17,6 +17,7 @@ class WorkoutInProgress extends WorkoutState {
   final WorkoutDay day;
   final DateTime startTime;
   final Map<String, List<SetLog>> exerciseLogs;
+  final Map<String, List<SetLog>> previousExerciseLogs;
 
   const WorkoutInProgress({
     required this.workoutLogId,
@@ -24,6 +25,7 @@ class WorkoutInProgress extends WorkoutState {
     required this.day,
     required this.startTime,
     required this.exerciseLogs,
+    this.previousExerciseLogs = const {},
   });
 
   WorkoutInProgress copyWith({
@@ -32,6 +34,7 @@ class WorkoutInProgress extends WorkoutState {
     WorkoutDay? day,
     DateTime? startTime,
     Map<String, List<SetLog>>? exerciseLogs,
+    Map<String, List<SetLog>>? previousExerciseLogs,
   }) {
     return WorkoutInProgress(
       workoutLogId: workoutLogId ?? this.workoutLogId,
@@ -39,6 +42,7 @@ class WorkoutInProgress extends WorkoutState {
       day: day ?? this.day,
       startTime: startTime ?? this.startTime,
       exerciseLogs: exerciseLogs ?? this.exerciseLogs,
+      previousExerciseLogs: previousExerciseLogs ?? this.previousExerciseLogs,
     );
   }
 
@@ -49,6 +53,7 @@ class WorkoutInProgress extends WorkoutState {
     day,
     startTime,
     exerciseLogs,
+    previousExerciseLogs,
   ];
 }
 

@@ -5,6 +5,8 @@ import 'core/di/injection_container.dart' as di;
 import 'presentation/blocs/plans/plans_bloc.dart';
 import 'presentation/blocs/workout/workout_bloc.dart';
 import 'presentation/blocs/timer/timer_bloc.dart';
+import 'presentation/blocs/history/history_bloc.dart';
+import 'presentation/blocs/history/history_event.dart';
 import 'presentation/screens/splash_screen.dart';
 
 void main() async {
@@ -26,6 +28,7 @@ class VoltApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<PlansBloc>()),
         BlocProvider(create: (_) => di.sl<WorkoutBloc>()),
         BlocProvider(create: (_) => di.sl<TimerBloc>()),
+        BlocProvider(create: (_) => di.sl<HistoryBloc>()..add(LoadHistory())),
       ],
       child: MaterialApp(
         title: 'Volt',

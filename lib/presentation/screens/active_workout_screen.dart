@@ -66,6 +66,19 @@ class ActiveWorkoutScreen extends StatelessWidget {
               itemBuilder: (context, index) {
                 final exercise = state.day.exercises[index];
                 final logs = state.exerciseLogs[exercise.id] ?? [];
+                final previousLogs = state.previousExerciseLogs[exercise.id];
+                String previousText = 'No previous data';
+                if (previousLogs != null && previousLogs.isNotEmpty) {
+                  final bestSet = previousLogs.reduce(
+                    (a, b) => a.weight > b.weight ? a : b,
+                  );
+                  final weightStr =
+                      bestSet.weight == bestSet.weight.truncateToDouble()
+                      ? bestSet.weight.toInt().toString()
+                      : bestSet.weight.toString();
+                  previousText =
+                      'Previous: ${previousLogs.length}x${bestSet.reps} @ ${weightStr}kg';
+                }
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,7 +92,7 @@ class ActiveWorkoutScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Previous: 3x10 @ 60kg', // Placeholder for history
+                      previousText,
                       style: AppTypography.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),

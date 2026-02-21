@@ -62,7 +62,7 @@ class SettingsScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Developed by Hudaif',
+                    'Crafted by Hudaif',
                     style: AppTypography.textTheme.labelLarge?.copyWith(
                       color: AppColors.primaryAccent,
                     ),
@@ -79,7 +79,10 @@ class SettingsScreen extends StatelessWidget {
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('This feature will be available in a future update.'),
+        content: Text(
+          'This feature will be available in a future update.',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: AppColors.surface,
         duration: Duration(seconds: 2),
       ),
