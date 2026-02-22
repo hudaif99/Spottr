@@ -133,6 +133,20 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     if (state is WorkoutInProgress) {
       final currentState = state as WorkoutInProgress;
 
+      bool hasCompletedSets = false;
+      for (var logs in currentState.exerciseLogs.values) {
+        if (logs.any((set) => set.isCompleted)) {
+          hasCompletedSets = true;
+          break;
+        }
+      }
+
+      if (!hasCompletedSets) {
+        // Discard the workout if nothing was completed
+        emit(WorkoutInitial());
+        return;
+      }
+
       final workoutLog = WorkoutLog(
         id: currentState.workoutLogId,
         planId: currentState.planId,

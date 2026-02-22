@@ -1,5 +1,4 @@
 import 'package:flutter/widgets.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'lib/data/datasources/local_database_service.dart';
 import 'lib/data/models/workout_log.dart';
 

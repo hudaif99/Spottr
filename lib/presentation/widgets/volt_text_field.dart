@@ -1,6 +1,5 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 
 class VoltTextField extends StatelessWidget {
   final String label;
@@ -34,8 +33,8 @@ class VoltTextField extends StatelessWidget {
         if (label.isNotEmpty) ...[
           Text(
             label,
-            style: AppTypography.textTheme.labelLarge?.copyWith(
-              color: AppColors.secondaryText,
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: context.colors.secondaryText,
             ),
           ),
           const SizedBox(height: 8),
@@ -46,16 +45,16 @@ class VoltTextField extends StatelessWidget {
           obscureText: obscureText,
           onChanged: onChanged,
           validator: validator,
-          style: AppTypography.textTheme.bodyLarge?.copyWith(
-            color: AppColors.primaryText,
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            color: context.colors.primaryText,
           ),
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: AppTypography.textTheme.bodyLarge?.copyWith(
-              color: AppColors.secondaryText.withOpacity(0.5),
+            hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: context.colors.secondaryText.withOpacity(0.5),
             ),
             filled: true,
-            fillColor: AppColors.surface,
+            fillColor: context.colors.surface,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
             border: OutlineInputBorder(
@@ -68,14 +67,14 @@ class VoltTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(
-                color: AppColors.primaryAccent,
+              borderSide: BorderSide(
+                color: context.colors.primaryAccent,
                 width: 2,
               ),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: AppColors.error, width: 2),
+              borderSide: BorderSide(color: context.colors.error, width: 2),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 20,

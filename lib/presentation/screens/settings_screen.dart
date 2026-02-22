@@ -1,6 +1,5 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 import '../widgets/volt_card.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -25,14 +24,14 @@ class SettingsScreen extends StatelessWidget {
                     'Profile & Appearance',
                     onTap: () => _showComingSoon(context),
                   ),
-                  const Divider(),
+                  Divider(),
                   _buildSettingRow(
                     context,
                     Icons.fitness_center,
                     'Workout Preferences',
                     onTap: () => _showComingSoon(context),
                   ),
-                  const Divider(),
+                  Divider(),
                   _buildSettingRow(
                     context,
                     Icons.monitor_weight_outlined,
@@ -40,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
                     value: 'kg',
                     onTap: () => _showComingSoon(context),
                   ),
-                  const Divider(),
+                  Divider(),
                   _buildSettingRow(
                     context,
                     Icons.storage_outlined,
@@ -56,15 +55,15 @@ class SettingsScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Volt v1.0.0',
-                    style: AppTypography.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.secondaryText,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: context.colors.secondaryText,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Crafted by Hudaif',
-                    style: AppTypography.textTheme.labelLarge?.copyWith(
-                      color: AppColors.primaryAccent,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: context.colors.primaryAccent,
                     ),
                   ),
                 ],
@@ -78,12 +77,12 @@ class SettingsScreen extends StatelessWidget {
 
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+      SnackBar(
         content: Text(
           'This feature will be available in a future update.',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: AppColors.surface,
+        backgroundColor: context.colors.surface,
         duration: Duration(seconds: 2),
       ),
     );
@@ -106,20 +105,20 @@ class SettingsScreen extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: AppColors.primaryText),
+                Icon(icon, color: context.colors.primaryText),
                 const SizedBox(width: 16),
-                Text(title, style: AppTypography.textTheme.bodyLarge),
+                Text(title, style: Theme.of(context).textTheme.bodyLarge),
               ],
             ),
             if (value != null)
               Text(
                 value,
-                style: AppTypography.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.primaryAccent,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: context.colors.primaryAccent,
                 ),
               )
             else
-              const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+              Icon(Icons.chevron_right, color: context.colors.secondaryText),
           ],
         ),
       ),

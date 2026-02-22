@@ -18,6 +18,13 @@ class PlansBloc extends Bloc<PlansEvent, PlansState> {
     emit(PlansLoading());
     try {
       final plans = await _repository.getPlans();
+
+      plans.sort((a, b) {
+        if (a.isActive && !b.isActive) return -1;
+        if (!a.isActive && b.isActive) return 1;
+        return b.createdAt.compareTo(a.createdAt);
+      });
+
       final activePlan = await _repository.getActivePlan();
       emit(PlansLoaded(plans: plans, activePlan: activePlan));
     } catch (e) {
@@ -27,7 +34,11 @@ class PlansBloc extends Bloc<PlansEvent, PlansState> {
 
   Future<void> _onAddPlan(AddPlan event, Emitter<PlansState> emit) async {
     try {
+      final existingPlans = await _repository.getPlans();
       await _repository.savePlan(event.plan);
+      if (existingPlans.isEmpty) {
+        await _repository.setActivePlan(event.plan.id);
+      }
       add(LoadPlans());
     } catch (e) {
       emit(PlansError('Failed to add plan: $e'));

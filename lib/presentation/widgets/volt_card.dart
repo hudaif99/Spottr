@@ -1,5 +1,5 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
 
 class VoltCard extends StatelessWidget {
   final Widget child;
@@ -7,6 +7,7 @@ class VoltCard extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? color;
   final bool hasBorder;
+  final Color? borderColor;
 
   const VoltCard({
     super.key,
@@ -15,15 +16,18 @@ class VoltCard extends StatelessWidget {
     this.onTap,
     this.color,
     this.hasBorder = false,
+    this.borderColor,
   });
 
   @override
   Widget build(BuildContext context) {
     final cardContent = Container(
       decoration: BoxDecoration(
-        color: color ?? AppColors.surface,
+        color: color ?? context.colors.surface,
         borderRadius: BorderRadius.circular(16),
-        border: hasBorder ? Border.all(color: AppColors.divider) : null,
+        border: hasBorder
+            ? Border.all(color: borderColor ?? context.colors.divider)
+            : null,
       ),
       child: Padding(padding: padding, child: child),
     );
@@ -34,8 +38,8 @@ class VoltCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          splashColor: AppColors.primaryAccent.withOpacity(0.1),
-          highlightColor: AppColors.primaryAccent.withOpacity(0.05),
+          splashColor: context.colors.primaryAccent.withOpacity(0.1),
+          highlightColor: context.colors.primaryAccent.withOpacity(0.05),
           child: cardContent,
         ),
       );

@@ -21,13 +21,14 @@ class PlanAdapter extends TypeAdapter<Plan> {
       name: fields[1] as String,
       isActive: fields[2] as bool,
       days: (fields[3] as List).cast<WorkoutDay>(),
+      createdAt: fields[4] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Plan obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -35,7 +36,9 @@ class PlanAdapter extends TypeAdapter<Plan> {
       ..writeByte(2)
       ..write(obj.isActive)
       ..writeByte(3)
-      ..write(obj.days);
+      ..write(obj.days)
+      ..writeByte(4)
+      ..write(obj.createdAt);
   }
 
   @override

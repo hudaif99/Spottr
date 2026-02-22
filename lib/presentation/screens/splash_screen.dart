@@ -1,6 +1,5 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -65,7 +64,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: context.colors.background,
       body: Center(
         child: AnimatedBuilder(
           animation: _controller,
@@ -76,7 +75,7 @@ class _SplashScreenState extends State<SplashScreen>
                 decoration: BoxDecoration(
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.primaryAccent.withOpacity(0.3),
+                      color: context.colors.primaryAccent.withOpacity(0.3),
                       blurRadius: _glowAnimation.value,
                       spreadRadius: _glowAnimation.value / 2,
                     ),
@@ -85,8 +84,8 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
                 child: Text(
                   'Volt',
-                  style: AppTypography.textTheme.displayLarge?.copyWith(
-                    color: AppColors.primaryAccent,
+                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                    color: context.colors.primaryAccent,
                     fontSize: 48,
                     letterSpacing: 2,
                   ),

@@ -1,3 +1,4 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/app_typography.dart';
@@ -27,17 +28,17 @@ class HomeScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Volt',
-          style: AppTypography.textTheme.headlineMedium?.copyWith(
-            color: AppColors.primaryAccent,
+          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            color: context.colors.primaryAccent,
             fontWeight: FontWeight.bold,
             letterSpacing: 1.5,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(
+            icon: Icon(
               Icons.settings_outlined,
-              color: AppColors.secondaryText,
+              color: context.colors.secondaryText,
             ),
             onPressed: () {
               Navigator.of(
@@ -62,14 +63,14 @@ class HomeScreen extends StatelessWidget {
                 // Welcome / Date
                 Text(
                   _getFormattedDate(),
-                  style: AppTypography.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.secondaryText,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.colors.secondaryText,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Ready to crush it?',
-                  style: AppTypography.textTheme.displaySmall,
+                  style: Theme.of(context).textTheme.displaySmall,
                 ),
                 const SizedBox(height: 32),
 
@@ -87,7 +88,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 32),
 
                 // Weekly Volume / Stats
-                _buildWeeklyStatsSection(),
+                _buildWeeklyStatsSection(context),
 
                 const SizedBox(height: 24),
 
@@ -111,17 +112,17 @@ class HomeScreen extends StatelessWidget {
           children: [
             Text(
               'No Active Plan',
-              style: AppTypography.textTheme.headlineMedium,
+              style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 8),
             Text(
               'Create a workout plan and set it as active to start training.',
-              style: AppTypography.textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
             VoltButton(
               text: 'Create Plan',
-              icon: const Icon(Icons.add, color: AppColors.background),
+              icon: Icon(Icons.add, color: context.colors.background),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(
@@ -150,39 +151,39 @@ class HomeScreen extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryAccent.withOpacity(0.1),
+                  color: context.colors.primaryAccent.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   'ACTIVE PLAN',
-                  style: AppTypography.textTheme.labelLarge?.copyWith(
-                    color: AppColors.primaryAccent,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: context.colors.primaryAccent,
                     fontSize: 12,
                   ),
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.flash_on,
-                color: AppColors.primaryAccent,
+                color: context.colors.primaryAccent,
                 size: 20,
               ),
             ],
           ),
           const SizedBox(height: 16),
-          Text(activePlan.name, style: AppTypography.textTheme.headlineMedium),
+          Text(activePlan.name, style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 8),
           Text(
             activePlan.days.isNotEmpty
                 ? '${activePlan.days.length} Days Workout'
                 : 'No workout days',
-            style: AppTypography.textTheme.bodyMedium,
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           const SizedBox(height: 24),
           VoltButton(
             text: 'Start Workout',
-            icon: const Icon(
+            icon: Icon(
               Icons.play_arrow_rounded,
-              color: AppColors.background,
+              color: context.colors.background,
             ),
             onPressed: activePlan.days.isEmpty
                 ? null
@@ -224,11 +225,11 @@ class HomeScreen extends StatelessWidget {
     return 'Today, ${months[now.month - 1]} ${now.day}';
   }
 
-  Widget _buildWeeklyStatsSection() {
+  Widget _buildWeeklyStatsSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Weekly Summary', style: AppTypography.textTheme.titleLarge),
+        Text('Weekly Summary', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         BlocBuilder<HistoryBloc, HistoryState>(
           builder: (context, state) {
@@ -263,13 +264,13 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Workouts',
-                          style: AppTypography.textTheme.bodyMedium,
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           '$weeklyWorkouts',
-                          style: AppTypography.textTheme.headlineMedium
-                              ?.copyWith(color: AppColors.primaryAccent),
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(color: context.colors.primaryAccent),
                         ),
                       ],
                     ),
@@ -283,15 +284,15 @@ class HomeScreen extends StatelessWidget {
                       children: [
                         Text(
                           'Volume',
-                          style: AppTypography.textTheme.bodyMedium,
+                          style: Theme.of(context).textTheme.bodyMedium,
                         ),
                         const SizedBox(height: 8),
                         Text(
                           weeklyVolume > 1000
                               ? '${(weeklyVolume / 1000).toStringAsFixed(1)}k kg'
                               : '${weeklyVolume.toStringAsFixed(0)} kg',
-                          style: AppTypography.textTheme.headlineMedium
-                              ?.copyWith(color: AppColors.secondaryAccent),
+                          style: Theme.of(context).textTheme.headlineMedium
+                              ?.copyWith(color: context.colors.secondaryAccent),
                         ),
                       ],
                     ),
@@ -309,7 +310,7 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Manage', style: AppTypography.textTheme.titleLarge),
+        Text('Manage', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         VoltCard(
           onTap: () {
@@ -325,25 +326,25 @@ class HomeScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: context.colors.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.divider),
+                      border: Border.all(color: context.colors.divider),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.list_alt,
-                      color: AppColors.primaryText,
+                      color: context.colors.primaryText,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Text(
                     'Workout Plans',
-                    style: AppTypography.textTheme.bodyLarge?.copyWith(
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+              Icon(Icons.chevron_right, color: context.colors.secondaryText),
             ],
           ),
         ),
@@ -362,25 +363,25 @@ class HomeScreen extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: context.colors.surface,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.divider),
+                      border: Border.all(color: context.colors.divider),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.history,
-                      color: AppColors.primaryText,
+                      color: context.colors.primaryText,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Text(
                     'History & Analytics',
-                    style: AppTypography.textTheme.bodyLarge?.copyWith(
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
               ),
-              const Icon(Icons.chevron_right, color: AppColors.secondaryText),
+              Icon(Icons.chevron_right, color: context.colors.secondaryText),
             ],
           ),
         ),

@@ -1,7 +1,6 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 import '../blocs/workout/workout_bloc.dart';
 import '../blocs/workout/workout_event.dart';
 import '../blocs/workout/workout_state.dart';
@@ -30,10 +29,10 @@ class ActiveWorkoutScreen extends StatelessWidget {
             }
             return Text(
               timeText,
-              style: AppTypography.textTheme.headlineMedium?.copyWith(
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                 color: timerState.mode == TimerMode.countdown
-                    ? AppColors.success
-                    : AppColors.primaryText,
+                    ? context.colors.success
+                    : context.colors.primaryText,
               ),
             );
           },
@@ -47,8 +46,8 @@ class ActiveWorkoutScreen extends StatelessWidget {
             },
             child: Text(
               'Finish',
-              style: AppTypography.textTheme.labelLarge?.copyWith(
-                color: AppColors.primaryAccent,
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: context.colors.primaryAccent,
               ),
             ),
           ),
@@ -86,14 +85,14 @@ class ActiveWorkoutScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     Text(
                       exercise.name,
-                      style: AppTypography.textTheme.titleLarge?.copyWith(
-                        color: AppColors.primaryAccent,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: context.colors.primaryAccent,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       previousText,
-                      style: AppTypography.textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
                     ...List.generate(logs.length, (setIndex) {
@@ -145,8 +144,10 @@ class ActiveWorkoutScreen extends StatelessWidget {
               },
             );
           }
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primaryAccent),
+          return Center(
+            child: CircularProgressIndicator(
+              color: context.colors.primaryAccent,
+            ),
           );
         },
       ),

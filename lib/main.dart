@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'core/di/injection_container.dart' as di;
 import 'presentation/blocs/plans/plans_bloc.dart';
+import 'presentation/blocs/plans/plans_event.dart';
 import 'presentation/blocs/workout/workout_bloc.dart';
 import 'presentation/blocs/timer/timer_bloc.dart';
 import 'presentation/blocs/history/history_bloc.dart';
@@ -25,14 +26,16 @@ class VoltApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => di.sl<PlansBloc>()),
+        BlocProvider(create: (_) => di.sl<PlansBloc>()..add(LoadPlans())),
         BlocProvider(create: (_) => di.sl<WorkoutBloc>()),
         BlocProvider(create: (_) => di.sl<TimerBloc>()),
         BlocProvider(create: (_) => di.sl<HistoryBloc>()..add(LoadHistory())),
       ],
       child: MaterialApp(
         title: 'Volt',
-        theme: AppTheme.darkTheme,
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         home: const SplashScreen(),
       ),

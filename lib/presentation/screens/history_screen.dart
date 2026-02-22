@@ -1,7 +1,6 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_state.dart';
 import '../widgets/volt_card.dart';
@@ -26,8 +25,8 @@ class HistoryScreen extends StatelessWidget {
       body: BlocBuilder<HistoryBloc, HistoryState>(
         builder: (context, state) {
           if (state is HistoryLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryAccent),
+            return Center(
+              child: CircularProgressIndicator(color: context.colors.primaryAccent),
             );
           }
 
@@ -37,20 +36,20 @@ class HistoryScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.bar_chart,
                       size: 64,
-                      color: AppColors.divider,
+                      color: context.colors.divider,
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'No Data Yet',
-                      style: AppTypography.textTheme.headlineMedium,
+                      style: Theme.of(context).textTheme.headlineMedium,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Complete some workouts to see your stats.',
-                      style: AppTypography.textTheme.bodyMedium,
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
                 ),
@@ -73,13 +72,13 @@ class HistoryScreen extends StatelessWidget {
                           children: [
                             Text(
                               log.dayName,
-                              style: AppTypography.textTheme.titleLarge
-                                  ?.copyWith(color: AppColors.primaryAccent),
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(color: context.colors.primaryAccent),
                             ),
                             Text(
                               _formatDate(log.startTime),
-                              style: AppTypography.textTheme.bodyMedium
-                                  ?.copyWith(color: AppColors.secondaryText),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(color: context.colors.secondaryText),
                             ),
                           ],
                         ),
@@ -89,29 +88,29 @@ class HistoryScreen extends StatelessWidget {
                           children: [
                             Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.monitor_weight_outlined,
                                   size: 16,
-                                  color: AppColors.secondaryText,
+                                  color: context.colors.secondaryText,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   '${log.totalVolume.toStringAsFixed(0)} kg',
-                                  style: AppTypography.textTheme.bodyLarge,
+                                  style: Theme.of(context).textTheme.bodyLarge,
                                 ),
                               ],
                             ),
                             Row(
                               children: [
-                                const Icon(
+                                Icon(
                                   Icons.timer_outlined,
                                   size: 16,
-                                  color: AppColors.secondaryText,
+                                  color: context.colors.secondaryText,
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
                                   _formatDuration(log.totalDurationInSeconds),
-                                  style: AppTypography.textTheme.bodyLarge,
+                                  style: Theme.of(context).textTheme.bodyLarge,
                                 ),
                               ],
                             ),
@@ -125,10 +124,10 @@ class HistoryScreen extends StatelessWidget {
             );
           }
 
-          return const Center(
+          return Center(
             child: Text(
               'Failed to load history',
-              style: TextStyle(color: AppColors.error),
+              style: TextStyle(color: context.colors.error),
             ),
           );
         },

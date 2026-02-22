@@ -1,5 +1,4 @@
 import 'package:hive/hive.dart';
-import 'set_log.dart';
 
 part 'exercise.g.dart';
 

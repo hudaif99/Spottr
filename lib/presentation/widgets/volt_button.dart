@@ -1,8 +1,6 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 
 enum VoltButtonVariant { primary, secondary, outline, ghost }
 
@@ -71,9 +69,9 @@ class _VoltButtonState extends State<VoltButton>
   Color get _backgroundColor {
     switch (widget.variant) {
       case VoltButtonVariant.primary:
-        return AppColors.primaryAccent;
+        return context.colors.primaryAccent;
       case VoltButtonVariant.secondary:
-        return AppColors.surface;
+        return context.colors.surface;
       case VoltButtonVariant.outline:
         return Colors.transparent;
       case VoltButtonVariant.ghost:
@@ -84,17 +82,17 @@ class _VoltButtonState extends State<VoltButton>
   Color get _textColor {
     switch (widget.variant) {
       case VoltButtonVariant.primary:
-        return AppColors.background;
+        return context.colors.background;
       case VoltButtonVariant.secondary:
       case VoltButtonVariant.outline:
       case VoltButtonVariant.ghost:
-        return AppColors.primaryText;
+        return context.colors.primaryText;
     }
   }
 
   Border? get _border {
     if (widget.variant == VoltButtonVariant.outline) {
-      return Border.all(color: AppColors.divider, width: 1);
+      return Border.all(color: context.colors.divider, width: 1);
     }
     return null;
   }
@@ -109,13 +107,11 @@ class _VoltButtonState extends State<VoltButton>
       onTapCancel: isDisabled ? null : _onTapCancel,
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
+        child: Container(
           height: 56, // Large tap area
           decoration: BoxDecoration(
             color: isDisabled
-                ? AppColors.surface.withOpacity(0.5)
+                ? context.colors.surface.withOpacity(0.5)
                 : _backgroundColor,
             borderRadius: BorderRadius.circular(16),
             border: _border,
@@ -139,9 +135,9 @@ class _VoltButtonState extends State<VoltButton>
                       ],
                       Text(
                         widget.text,
-                        style: AppTypography.textTheme.labelLarge?.copyWith(
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
                           color: isDisabled
-                              ? AppColors.secondaryText
+                              ? context.colors.secondaryText
                               : _textColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

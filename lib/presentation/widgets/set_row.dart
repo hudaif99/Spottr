@@ -1,7 +1,6 @@
+import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 import '../../data/models/set_log.dart';
 
 class SetRow extends StatefulWidget {
@@ -79,8 +78,8 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final bool isCompleted = widget.setLog.isCompleted;
     final bgColor = isCompleted
-        ? AppColors.success.withOpacity(0.15)
-        : AppColors.surface;
+        ? context.colors.success.withOpacity(0.15)
+        : context.colors.surface;
 
     return Dismissible(
       key: Key(widget.setLog.id),
@@ -90,8 +89,8 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
       background: Container(
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20),
-        color: AppColors.success,
-        child: const Icon(Icons.check, color: AppColors.background, size: 32),
+        color: context.colors.success,
+        child: Icon(Icons.check, color: context.colors.background, size: 32),
       ),
       onDismissed: _handleSwipeComplete,
       child: ScaleTransition(
@@ -102,7 +101,7 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
             color: bgColor,
             borderRadius: BorderRadius.circular(12),
             border: isCompleted
-                ? Border.all(color: AppColors.success.withOpacity(0.5))
+                ? Border.all(color: context.colors.success.withOpacity(0.5))
                 : null,
           ),
           child: Padding(
@@ -114,10 +113,10 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
                   width: 32,
                   child: Text(
                     '${widget.index + 1}',
-                    style: AppTypography.textTheme.headlineMedium?.copyWith(
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                       color: isCompleted
-                          ? AppColors.success
-                          : AppColors.secondaryText,
+                          ? context.colors.success
+                          : context.colors.secondaryText,
                     ),
                   ),
                 ),
@@ -129,7 +128,7 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
                     decoration: BoxDecoration(
                       color: isCompleted
                           ? Colors.transparent
-                          : AppColors.background,
+                          : context.colors.background,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: TextField(
@@ -138,15 +137,15 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
                         decimal: true,
                       ),
                       textAlign: TextAlign.center,
-                      style: AppTypography.textTheme.titleLarge?.copyWith(
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: isCompleted
-                            ? AppColors.success
-                            : AppColors.primaryText,
+                            ? context.colors.success
+                            : context.colors.primaryText,
                       ),
                       decoration: InputDecoration(
                         hintText: '-',
-                        hintStyle: AppTypography.textTheme.titleLarge?.copyWith(
-                          color: AppColors.secondaryText.withOpacity(0.5),
+                        hintStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: context.colors.secondaryText.withOpacity(0.5),
                         ),
                         border: InputBorder.none,
                       ),
@@ -161,7 +160,7 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('kg', style: AppTypography.textTheme.bodyMedium),
+                Text('kg', style: Theme.of(context).textTheme.bodyMedium),
                 const SizedBox(width: 16),
 
                 // Reps
@@ -171,22 +170,22 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
                     decoration: BoxDecoration(
                       color: isCompleted
                           ? Colors.transparent
-                          : AppColors.background,
+                          : context.colors.background,
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: TextField(
                       controller: _repsCtrl,
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
-                      style: AppTypography.textTheme.titleLarge?.copyWith(
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         color: isCompleted
-                            ? AppColors.success
-                            : AppColors.primaryText,
+                            ? context.colors.success
+                            : context.colors.primaryText,
                       ),
                       decoration: InputDecoration(
                         hintText: '-',
-                        hintStyle: AppTypography.textTheme.titleLarge?.copyWith(
-                          color: AppColors.secondaryText.withOpacity(0.5),
+                        hintStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: context.colors.secondaryText.withOpacity(0.5),
                         ),
                         border: InputBorder.none,
                       ),
@@ -199,15 +198,15 @@ class _SetRowState extends State<SetRow> with SingleTickerProviderStateMixin {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Text('reps', style: AppTypography.textTheme.bodyMedium),
+                Text('reps', style: Theme.of(context).textTheme.bodyMedium),
 
                 // Checkbox / Uncheck
                 IconButton(
                   icon: Icon(
                     isCompleted ? Icons.check_circle : Icons.circle_outlined,
                     color: isCompleted
-                        ? AppColors.success
-                        : AppColors.secondaryText,
+                        ? context.colors.success
+                        : context.colors.secondaryText,
                   ),
                   onPressed: () {
                     HapticFeedback.lightImpact();
