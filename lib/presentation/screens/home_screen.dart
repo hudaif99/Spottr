@@ -1,23 +1,19 @@
 import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors.dart';
-import '../../core/theme/app_typography.dart';
 import '../widgets/volt_card.dart';
-import '../widgets/volt_button.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/plan.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_state.dart';
 import '../blocs/workout/workout_bloc.dart';
-import '../blocs/workout/workout_event.dart';
 import '../blocs/workout/workout_state.dart';
 import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_event.dart' as he;
 import '../blocs/history/history_state.dart';
 import 'plan_management_screen.dart';
-import 'active_workout_screen.dart';
 import 'settings_screen.dart';
 import 'history_screen.dart';
+import '../widgets/active_plan_card.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -81,7 +77,7 @@ class HomeScreen extends StatelessWidget {
                     if (state is PlansLoaded) {
                       activePlan = state.activePlan;
                     }
-                    return _buildActivePlanSection(context, activePlan);
+                    return ActivePlanCard(activePlan: activePlan);
                   },
                 ),
 
@@ -98,110 +94,6 @@ class HomeScreen extends StatelessWidget {
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildActivePlanSection(BuildContext context, Plan? activePlan) {
-    if (activePlan == null) {
-      return VoltCard(
-        padding: const EdgeInsets.all(24),
-        hasBorder: true,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'No Active Plan',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Create a workout plan and set it as active to start training.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 24),
-            VoltButton(
-              text: 'Create Plan',
-              icon: Icon(Icons.add, color: context.colors.background),
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => const PlanManagementScreen(),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      );
-    }
-
-    return VoltCard(
-      padding: const EdgeInsets.all(24),
-      hasBorder: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: context.colors.primaryAccent.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  'ACTIVE PLAN',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: context.colors.primaryAccent,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-              Icon(
-                Icons.flash_on,
-                color: context.colors.primaryAccent,
-                size: 20,
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(activePlan.name, style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 8),
-          Text(
-            activePlan.days.isNotEmpty
-                ? '${activePlan.days.length} Days Workout'
-                : 'No workout days',
-            style: Theme.of(context).textTheme.bodyMedium,
-          ),
-          const SizedBox(height: 24),
-          VoltButton(
-            text: 'Start Workout',
-            icon: Icon(
-              Icons.play_arrow_rounded,
-              color: context.colors.background,
-            ),
-            onPressed: activePlan.days.isEmpty
-                ? null
-                : () {
-                    context.read<WorkoutBloc>().add(
-                      StartWorkout(
-                        plan: activePlan,
-                        day: activePlan.days.first,
-                      ),
-                    );
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const ActiveWorkoutScreen(),
-                      ),
-                    );
-                  },
-          ),
-        ],
       ),
     );
   }
