@@ -46,6 +46,17 @@ class WorkoutInProgress extends WorkoutState {
     );
   }
 
+  bool get hasProgress {
+    for (var logs in exerciseLogs.values) {
+      if (logs.any(
+        (set) => set.isCompleted || set.weight > 0 || set.reps > 0,
+      )) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   @override
   List<Object?> get props => [
     workoutLogId,

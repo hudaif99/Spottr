@@ -344,16 +344,42 @@ class ActiveWorkoutScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(24.0),
                         child: Align(
                           alignment: Alignment.bottomCenter,
-                          child: VoltButton(
-                            text: 'Finish Workout',
-                            icon: Icon(
-                              Icons.check_circle_outline,
-                              color: context.colors.background,
-                            ),
-                            onPressed: () {
-                              context.read<WorkoutBloc>().add(FinishWorkout());
-                              Navigator.of(context).pop();
-                            },
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              VoltButton(
+                                text: 'Finish Workout',
+                                icon: Icon(
+                                  Icons.check_circle_outline,
+                                  color: context.colors.background,
+                                ),
+                                onPressed: () {
+                                  context.read<WorkoutBloc>().add(
+                                    FinishWorkout(),
+                                  );
+                                  Navigator.of(context).pop();
+                                },
+                              ),
+                              if (state.hasProgress) ...[
+                                const SizedBox(height: 16),
+                                TextButton(
+                                  onPressed: () {
+                                    context.read<WorkoutBloc>().add(
+                                      CancelWorkout(),
+                                    );
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: Text(
+                                    'Reset Workout',
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(
+                                          color: context.colors.error,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
                       ),

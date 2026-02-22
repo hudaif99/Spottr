@@ -308,24 +308,46 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
                   ],
                   BlocBuilder<WorkoutBloc, WorkoutState>(
                     builder: (context, workoutState) {
-                      if (workoutState is WorkoutInProgress) {
+                      if (workoutState is WorkoutInProgress &&
+                          workoutState.hasProgress) {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 8),
-                            VoltButton(
-                              text: 'Resume Workout',
-                              icon: Icon(
-                                Icons.play_arrow_rounded,
-                                color: context.colors.background,
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const ActiveWorkoutScreen(),
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: VoltButton(
+                                    text: 'Resume',
+                                    icon: Icon(
+                                      Icons.play_arrow_rounded,
+                                      color: context.colors.background,
+                                    ),
+                                    onPressed: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const ActiveWorkoutScreen(),
+                                        ),
+                                      );
+                                    },
                                   ),
-                                );
-                              },
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  flex: 1,
+                                  child: VoltButton(
+                                    text: 'Reset',
+                                    variant: VoltButtonVariant.outline,
+                                    onPressed: () {
+                                      context.read<WorkoutBloc>().add(
+                                        CancelWorkout(),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         );
