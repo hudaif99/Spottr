@@ -5,6 +5,7 @@ import 'core/di/injection_container.dart' as di;
 import 'presentation/blocs/plans/plans_bloc.dart';
 import 'presentation/blocs/plans/plans_event.dart';
 import 'presentation/blocs/workout/workout_bloc.dart';
+import 'presentation/blocs/workout/workout_event.dart';
 import 'presentation/blocs/timer/timer_bloc.dart';
 import 'presentation/blocs/history/history_bloc.dart';
 import 'presentation/blocs/history/history_event.dart';
@@ -27,7 +28,7 @@ class VoltApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => di.sl<PlansBloc>()..add(LoadPlans())),
-        BlocProvider(create: (_) => di.sl<WorkoutBloc>()),
+        BlocProvider(create: (_) => di.sl<WorkoutBloc>()..add(ResumeWorkout())),
         BlocProvider(create: (_) => di.sl<TimerBloc>()),
         BlocProvider(create: (_) => di.sl<HistoryBloc>()..add(LoadHistory())),
       ],

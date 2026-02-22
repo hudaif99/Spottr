@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
 import '../../../data/models/set_log.dart';
 import '../../../data/models/workout_log.dart';
+import '../../../data/models/active_workout.dart';
 import '../../../domain/repositories/workout_repository.dart';
 import 'workout_event.dart';
 import 'workout_state.dart';
@@ -17,6 +18,39 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     on<RemoveSet>(_onRemoveSet);
     on<FinishWorkout>(_onFinishWorkout);
     on<CancelWorkout>(_onCancelWorkout);
+    on<ResumeWorkout>(_onResumeWorkout);
+  }
+
+  Future<void> _saveProgress(WorkoutInProgress state) async {
+    final activeWorkout = ActiveWorkout(
+      workoutLogId: state.workoutLogId,
+      planId: state.planId,
+      day: state.day,
+      startTime: state.startTime,
+      exerciseLogs: state.exerciseLogs,
+      previousExerciseLogs: state.previousExerciseLogs,
+    );
+    await _repository.saveActiveWorkout(activeWorkout);
+  }
+
+  void _onResumeWorkout(ResumeWorkout event, Emitter<WorkoutState> emit) {
+    final activeWorkout = _repository.getActiveWorkout();
+    if (activeWorkout != null) {
+      emit(
+        WorkoutInProgress(
+          workoutLogId: activeWorkout.workoutLogId,
+          planId: activeWorkout.planId,
+          day: activeWorkout.day,
+          startTime: activeWorkout.startTime,
+          exerciseLogs: Map<String, List<SetLog>>.from(
+            activeWorkout.exerciseLogs,
+          ),
+          previousExerciseLogs: Map<String, List<SetLog>>.from(
+            activeWorkout.previousExerciseLogs,
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _onStartWorkout(
@@ -47,16 +81,17 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       // Ignore errors fetching previous logs
     }
 
-    emit(
-      WorkoutInProgress(
-        workoutLogId: 'log_${_uuid.v4()}',
-        planId: event.plan.id,
-        day: event.day,
-        startTime: DateTime.now(),
-        exerciseLogs: initialLogs,
-        previousExerciseLogs: previousExerciseLogs,
-      ),
+    final newState = WorkoutInProgress(
+      workoutLogId: 'log_${_uuid.v4()}',
+      planId: event.plan.id,
+      day: event.day,
+      startTime: DateTime.now(),
+      exerciseLogs: initialLogs,
+      previousExerciseLogs: previousExerciseLogs,
     );
+
+    await _saveProgress(newState);
+    emit(newState);
   }
 
   void _onAddSet(AddSet event, Emitter<WorkoutState> emit) {
@@ -84,7 +119,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
 
       currentLogs[event.exerciseId] = exerciseSets;
 
-      emit(currentState.copyWith(exerciseLogs: currentLogs));
+      final newState = currentState.copyWith(exerciseLogs: currentLogs);
+      _saveProgress(newState);
+      emit(newState);
     }
   }
 
@@ -103,7 +140,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       if (setIndex != -1) {
         exerciseSets[setIndex] = event.setLog;
         currentLogs[event.exerciseId] = exerciseSets;
-        emit(currentState.copyWith(exerciseLogs: currentLogs));
+        final newState = currentState.copyWith(exerciseLogs: currentLogs);
+        _saveProgress(newState);
+        emit(newState);
       }
     }
   }
@@ -122,7 +161,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       exerciseSets.removeWhere((s) => s.id == event.setId);
       currentLogs[event.exerciseId] = exerciseSets;
 
-      emit(currentState.copyWith(exerciseLogs: currentLogs));
+      final newState = currentState.copyWith(exerciseLogs: currentLogs);
+      _saveProgress(newState);
+      emit(newState);
     }
   }
 
@@ -159,6 +200,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
 
       try {
         await _repository.saveWorkoutLog(workoutLog);
+        await _repository.clearActiveWorkout();
         emit(WorkoutCompleted());
         // Reset state after completion so we can start another one later
         emit(WorkoutInitial());
@@ -168,7 +210,11 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     }
   }
 
-  void _onCancelWorkout(CancelWorkout event, Emitter<WorkoutState> emit) {
+  Future<void> _onCancelWorkout(
+    CancelWorkout event,
+    Emitter<WorkoutState> emit,
+  ) async {
+    await _repository.clearActiveWorkout();
     emit(WorkoutInitial());
   }
 }

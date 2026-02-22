@@ -24,6 +24,8 @@ class FinishWorkout extends WorkoutEvent {}
 
 class CancelWorkout extends WorkoutEvent {}
 
+class ResumeWorkout extends WorkoutEvent {}
+
 class AddSet extends WorkoutEvent {
   final String exerciseId;
   const AddSet(this.exerciseId);

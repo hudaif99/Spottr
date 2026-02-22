@@ -1,6 +1,7 @@
 import '../../data/models/plan.dart';
 import '../../data/models/workout_log.dart';
 import '../../data/models/exercise.dart';
+import '../../data/models/active_workout.dart';
 
 abstract class WorkoutRepository {
   // Plans
@@ -19,4 +20,9 @@ abstract class WorkoutRepository {
   Future<List<WorkoutLog>> getWorkoutLogs();
   Future<void> saveWorkoutLog(WorkoutLog log);
   Future<void> deleteWorkoutLog(String id);
+
+  // Active Workout Cache
+  ActiveWorkout? getActiveWorkout();
+  Future<void> saveActiveWorkout(ActiveWorkout workout);
+  Future<void> clearActiveWorkout();
 }

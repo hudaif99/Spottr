@@ -7,6 +7,7 @@ import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_state.dart';
 import '../blocs/workout/workout_bloc.dart';
 import '../blocs/workout/workout_event.dart';
+import '../blocs/workout/workout_state.dart';
 import '../widgets/volt_button.dart';
 import '../widgets/volt_card.dart';
 import '../screens/active_workout_screen.dart';
@@ -305,28 +306,62 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                   ],
-                  const SizedBox(height: 8),
-                  VoltButton(
-                    text: 'Start ${_selectedDay?.name ?? "Workout"}',
-                    icon: Icon(
-                      Icons.play_arrow_rounded,
-                      color: context.colors.background,
-                    ),
-                    onPressed: activePlan.days.isEmpty || _selectedDay == null
-                        ? null
-                        : () {
-                            context.read<WorkoutBloc>().add(
-                              StartWorkout(
-                                plan: activePlan,
-                                day: _selectedDay!,
+                  BlocBuilder<WorkoutBloc, WorkoutState>(
+                    builder: (context, workoutState) {
+                      if (workoutState is WorkoutInProgress) {
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 8),
+                            VoltButton(
+                              text: 'Resume Workout',
+                              icon: Icon(
+                                Icons.play_arrow_rounded,
+                                color: context.colors.background,
                               ),
-                            );
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => const ActiveWorkoutScreen(),
-                              ),
-                            );
-                          },
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => const ActiveWorkoutScreen(),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        );
+                      }
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 8),
+                          VoltButton(
+                            text: 'Start ${_selectedDay?.name ?? "Workout"}',
+                            icon: Icon(
+                              Icons.play_arrow_rounded,
+                              color: context.colors.background,
+                            ),
+                            onPressed:
+                                activePlan.days.isEmpty || _selectedDay == null
+                                ? null
+                                : () {
+                                    context.read<WorkoutBloc>().add(
+                                      StartWorkout(
+                                        plan: activePlan,
+                                        day: _selectedDay!,
+                                      ),
+                                    );
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) =>
+                                            const ActiveWorkoutScreen(),
+                                      ),
+                                    );
+                                  },
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),

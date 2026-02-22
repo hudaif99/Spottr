@@ -3,6 +3,7 @@ import '../datasources/local_database_service.dart';
 import '../models/exercise.dart';
 import '../models/plan.dart';
 import '../models/workout_log.dart';
+import '../models/active_workout.dart';
 
 class WorkoutRepositoryImpl implements WorkoutRepository {
   final LocalDatabaseService _localDb;
@@ -78,5 +79,21 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   @override
   Future<void> deleteWorkoutLog(String id) async {
     await _localDb.deleteWorkoutLog(id);
+  }
+
+  // Active Workout Caching Methods
+  @override
+  ActiveWorkout? getActiveWorkout() {
+    return _localDb.getActiveWorkout();
+  }
+
+  @override
+  Future<void> saveActiveWorkout(ActiveWorkout workout) async {
+    await _localDb.saveActiveWorkout(workout);
+  }
+
+  @override
+  Future<void> clearActiveWorkout() async {
+    await _localDb.clearActiveWorkout();
   }
 }
