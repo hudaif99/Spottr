@@ -1,76 +1,100 @@
 import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
+import '../widgets/volt_button.dart';
 import '../widgets/volt_card.dart';
+import '../../data/datasources/backup_restore_service.dart';
+import '../blocs/plans/plans_bloc.dart';
+import '../blocs/plans/plans_event.dart';
+import '../blocs/history/history_bloc.dart';
+import '../blocs/history/history_event.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _isLoading = false;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            VoltCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildSettingRow(
-                    context,
-                    Icons.person_outline,
-                    'Profile & Appearance',
-                    onTap: () => _showComingSoon(context),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                VoltCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildSettingRow(
+                        context,
+                        Icons.person_outline,
+                        'Profile & Appearance',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      const Divider(),
+                      _buildSettingRow(
+                        context,
+                        Icons.fitness_center,
+                        'Workout Preferences',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      const Divider(),
+                      _buildSettingRow(
+                        context,
+                        Icons.monitor_weight_outlined,
+                        'Units (kg/lb)',
+                        value: 'kg',
+                        onTap: () => _showComingSoon(context),
+                      ),
+                      const Divider(),
+                      _buildSettingRow(
+                        context,
+                        Icons.storage_outlined,
+                        'Backup & Restore Data',
+                        onTap: () => _showBackupRestoreBottomSheet(context),
+                      ),
+                    ],
                   ),
-                  Divider(),
-                  _buildSettingRow(
-                    context,
-                    Icons.fitness_center,
-                    'Workout Preferences',
-                    onTap: () => _showComingSoon(context),
+                ),
+                const SizedBox(height: 32),
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Volt v1.0.0',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: context.colors.secondaryText,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Crafted by Hudaif',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: context.colors.primaryAccent,
+                        ),
+                      ),
+                    ],
                   ),
-                  Divider(),
-                  _buildSettingRow(
-                    context,
-                    Icons.monitor_weight_outlined,
-                    'Units (kg/lb)',
-                    value: 'kg',
-                    onTap: () => _showComingSoon(context),
-                  ),
-                  Divider(),
-                  _buildSettingRow(
-                    context,
-                    Icons.storage_outlined,
-                    'Backup & Restore Data',
-                    onTap: () => _showComingSoon(context),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-            const SizedBox(height: 32),
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    'Volt v1.0.0',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: context.colors.secondaryText,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Crafted by Hudaif',
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: context.colors.primaryAccent,
-                    ),
-                  ),
-                ],
-              ),
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black54,
+              child: const Center(child: CircularProgressIndicator()),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
@@ -78,12 +102,129 @@ class SettingsScreen extends StatelessWidget {
   void _showComingSoon(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
+        content: const Text(
           'This feature will be available in a future update.',
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: context.colors.surface,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showBackupRestoreBottomSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext sheetContext) {
+        return Container(
+          decoration: BoxDecoration(
+            color: context.colors.background,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          padding: const EdgeInsets.all(24.0),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: context.colors.divider,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Backup & Restore',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Export your workout data to keep it safe, or restore it to a new device.',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: context.colors.secondaryText,
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 32),
+                VoltButton(
+                  text: 'Export Backup (.zip)',
+                  icon: Icon(
+                    Icons.upload_file,
+                    color: context.colors.background,
+                  ),
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    _handleExport(context);
+                  },
+                ),
+                const SizedBox(height: 16),
+                VoltButton(
+                  text: 'Restore from Backup',
+                  variant: VoltButtonVariant.outline,
+                  icon: Icon(Icons.restore, color: context.colors.primaryText),
+                  onPressed: () {
+                    Navigator.of(sheetContext).pop();
+                    _handleImport(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _handleExport(BuildContext context) async {
+    setState(() => _isLoading = true);
+    final error = await GetIt.I<BackupRestoreService>().exportData();
+    setState(() => _isLoading = false);
+
+    if (context.mounted) {
+      if (error != null) {
+        _showSnackBar(context, error, true);
+      } else {
+        _showSnackBar(context, 'Backup extracted successfully!', false);
+      }
+    }
+  }
+
+  Future<void> _handleImport(BuildContext context) async {
+    setState(() => _isLoading = true);
+    final error = await GetIt.I<BackupRestoreService>().importData();
+    setState(() => _isLoading = false);
+
+    if (context.mounted) {
+      if (error != null) {
+        _showSnackBar(context, error, true);
+      } else {
+        // Refresh entire app state from the newly imported database
+        context.read<PlansBloc>().add(LoadPlans());
+        context.read<HistoryBloc>().add(LoadHistory());
+        _showSnackBar(
+          context,
+          'Data restored completely! Pull down to refresh if needed.',
+          false,
+        );
+      }
+    }
+  }
+
+  void _showSnackBar(BuildContext context, String message, bool isError) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(color: Colors.white)),
+        backgroundColor: isError
+            ? context.colors.error
+            : context.colors.success,
+        duration: const Duration(seconds: 4),
       ),
     );
   }

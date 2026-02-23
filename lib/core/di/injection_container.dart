@@ -1,5 +1,6 @@
 import 'package:get_it/get_it.dart';
 import '../../data/datasources/local_database_service.dart';
+import '../../data/datasources/backup_restore_service.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../presentation/blocs/plans/plans_bloc.dart';
 import '../../presentation/blocs/workout/workout_bloc.dart';
@@ -14,6 +15,10 @@ Future<void> initDI() async {
   final localDb = LocalDatabaseService();
   await localDb.init();
   sl.registerSingleton<LocalDatabaseService>(localDb);
+
+  sl.registerLazySingleton<BackupRestoreService>(
+    () => BackupRestoreService(sl()),
+  );
 
   // Repositories
   sl.registerLazySingleton<WorkoutRepository>(

@@ -83,4 +83,18 @@ class LocalDatabaseService {
   Future<void> clearActiveWorkout() async {
     await _activeWorkoutBox.clear();
   }
+
+  // --- Database Lifecycle (For Backup/Restore) ---
+  Future<void> closeAll() async {
+    await Hive.close();
+  }
+
+  Future<void> reopenAll() async {
+    _plansBox = await Hive.openBox<Plan>(_plansBoxName);
+    _exercisesBox = await Hive.openBox<Exercise>(_exercisesBoxName);
+    _workoutLogsBox = await Hive.openBox<WorkoutLog>(_workoutLogsBoxName);
+    _activeWorkoutBox = await Hive.openBox<ActiveWorkout>(
+      _activeWorkoutBoxName,
+    );
+  }
 }
