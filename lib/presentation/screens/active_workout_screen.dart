@@ -1,6 +1,7 @@
 import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get_it/get_it.dart';
 import '../blocs/workout/workout_bloc.dart';
 import '../blocs/workout/workout_event.dart';
 import '../blocs/workout/workout_state.dart';
@@ -8,6 +9,7 @@ import '../blocs/timer/timer_bloc.dart';
 import '../blocs/timer/timer_event.dart';
 import '../blocs/timer/timer_state.dart';
 import '../../data/models/set_log.dart';
+import '../../data/datasources/local_database_service.dart';
 import '../widgets/set_row.dart';
 import '../widgets/volt_button.dart';
 import '../widgets/volt_card.dart';
@@ -306,7 +308,8 @@ class ActiveWorkoutScreen extends StatelessWidget {
                                         if (logs[setIndex].reps > 0) {
                                           context.read<TimerBloc>().add(
                                             StartRestTimer(
-                                              exercise.restDurationSeconds,
+                                              GetIt.I<LocalDatabaseService>()
+                                                  .getRestTime(),
                                             ),
                                           );
                                         }

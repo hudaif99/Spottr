@@ -1,9 +1,11 @@
 import 'package:volt/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../widgets/volt_button.dart';
 import '../widgets/volt_card.dart';
+import '../../data/datasources/local_database_service.dart';
 import '../../data/datasources/backup_restore_service.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
@@ -19,6 +21,13 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
+  int _restTime = 90;
+
+  @override
+  void initState() {
+    super.initState();
+    _restTime = GetIt.I<LocalDatabaseService>().getRestTime();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,10 +60,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       const Divider(),
                       _buildSettingRow(
                         context,
-                        Icons.monitor_weight_outlined,
-                        'Units (kg/lb)',
-                        value: 'kg',
-                        onTap: () => _showComingSoon(context),
+                        Icons.timer_outlined,
+                        'Rest Time',
+                        value: '${_restTime}s',
+                        onTap: () => _showRestTimePickerBottomSheet(context),
                       ),
                       const Divider(),
                       _buildSettingRow(
@@ -109,6 +118,234 @@ class _SettingsScreenState extends State<SettingsScreen> {
         backgroundColor: context.colors.surface,
         duration: const Duration(seconds: 2),
       ),
+    );
+  }
+
+  void _showRestTimePickerBottomSheet(BuildContext context) {
+    final List<int> options = [30, 45, 60, 90, 120, 150, 180];
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (BuildContext sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              decoration: BoxDecoration(
+                color: context.colors.background,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(24),
+                ),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                24.0,
+                24.0,
+                24.0,
+                MediaQuery.of(context).viewInsets.bottom + 24.0,
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: context.colors.divider,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Default Rest Time',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose the automatic countdown duration between your sets.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: context.colors.secondaryText,
+                        height: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    Wrap(
+                      spacing: 12.0,
+                      runSpacing: 12.0,
+                      children: [
+                        ...options.map((int seconds) {
+                          final bool isSelected = _restTime == seconds;
+                          final String label = seconds >= 60
+                              ? (seconds % 60 == 0
+                                    ? '${seconds ~/ 60}m'
+                                    : '${seconds ~/ 60}m ${seconds % 60}s')
+                              : '${seconds}s';
+
+                          return ChoiceChip(
+                            label: Text(label),
+                            selected: isSelected,
+                            selectedColor: context.colors.primaryAccent,
+                            backgroundColor: context.colors.surface,
+                            labelStyle: TextStyle(
+                              color: isSelected
+                                  ? Colors.black
+                                  : context.colors.primaryText,
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
+                            onSelected: (bool selected) async {
+                              if (selected) {
+                                setModalState(() => _restTime = seconds);
+                                setState(() => _restTime = seconds);
+                                await GetIt.I<LocalDatabaseService>()
+                                    .saveRestTime(seconds);
+                                if (context.mounted) {
+                                  Navigator.of(sheetContext).pop();
+                                }
+                              }
+                            },
+                          );
+                        }),
+                        Builder(
+                          builder: (context) {
+                            final bool isCustomSelected = !options.contains(
+                              _restTime,
+                            );
+                            final String label = isCustomSelected
+                                ? 'Custom (${_restTime}s)'
+                                : 'Custom';
+                            return ChoiceChip(
+                              label: Text(label),
+                              selected: isCustomSelected,
+                              selectedColor: context.colors.primaryAccent,
+                              backgroundColor: context.colors.surface,
+                              labelStyle: TextStyle(
+                                color: isCustomSelected
+                                    ? Colors.black
+                                    : context.colors.primaryText,
+                                fontWeight: isCustomSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.normal,
+                              ),
+                              onSelected: (bool selected) async {
+                                await showCupertinoModalPopup<int>(
+                                  context: context,
+                                  builder: (BuildContext popupContext) {
+                                    Duration tempDuration = Duration(
+                                      seconds: isCustomSelected ? _restTime : 0,
+                                    );
+                                    return Container(
+                                      height: 300,
+                                      color: context.colors.background,
+                                      child: SafeArea(
+                                        top: false,
+                                        child: Column(
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
+                                              children: [
+                                                CupertinoButton(
+                                                  child: Text(
+                                                    'Cancel',
+                                                    style: TextStyle(
+                                                      color: context
+                                                          .colors
+                                                          .secondaryText,
+                                                    ),
+                                                  ),
+                                                  onPressed: () => Navigator.of(
+                                                    popupContext,
+                                                  ).pop(),
+                                                ),
+                                                CupertinoButton(
+                                                  child: Text(
+                                                    'Set',
+                                                    style: TextStyle(
+                                                      color: context
+                                                          .colors
+                                                          .primaryAccent,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  onPressed: () {
+                                                    Navigator.of(
+                                                      popupContext,
+                                                    ).pop(
+                                                      tempDuration.inSeconds,
+                                                    );
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                            Expanded(
+                                              child: CupertinoTheme(
+                                                data: CupertinoThemeData(
+                                                  brightness: Theme.of(
+                                                    context,
+                                                  ).brightness,
+                                                  textTheme:
+                                                      CupertinoTextThemeData(
+                                                        pickerTextStyle:
+                                                            TextStyle(
+                                                              color: context
+                                                                  .colors
+                                                                  .primaryText,
+                                                              fontSize: 22,
+                                                            ),
+                                                      ),
+                                                ),
+                                                child: CupertinoTimerPicker(
+                                                  mode: CupertinoTimerPickerMode
+                                                      .ms,
+                                                  initialTimerDuration:
+                                                      tempDuration,
+                                                  onTimerDurationChanged:
+                                                      (Duration newDuration) {
+                                                        tempDuration =
+                                                            newDuration;
+                                                      },
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ).then((customValue) async {
+                                  if (customValue != null && customValue > 0) {
+                                    setModalState(
+                                      () => _restTime = customValue,
+                                    );
+                                    setState(() => _restTime = customValue);
+                                    await GetIt.I<LocalDatabaseService>()
+                                        .saveRestTime(customValue);
+                                    if (context.mounted) {
+                                      Navigator.of(sheetContext).pop();
+                                    }
+                                  }
+                                });
+                              },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

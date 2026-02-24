@@ -12,10 +12,13 @@ class LocalDatabaseService {
   static const String _workoutLogsBoxName = 'workout_logs_box';
   static const String _activeWorkoutBoxName = 'active_workout_box';
 
+  static const String _settingsBoxName = 'settings_box';
+
   late Box<Plan> _plansBox;
   late Box<Exercise> _exercisesBox;
   late Box<WorkoutLog> _workoutLogsBox;
   late Box<ActiveWorkout> _activeWorkoutBox;
+  late Box<dynamic> _settingsBox;
 
   Future<void> init() async {
     await Hive.initFlutter();
@@ -47,6 +50,7 @@ class LocalDatabaseService {
     _activeWorkoutBox = await Hive.openBox<ActiveWorkout>(
       _activeWorkoutBoxName,
     );
+    _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
   }
 
   // --- Plans ---
@@ -84,6 +88,15 @@ class LocalDatabaseService {
     await _activeWorkoutBox.clear();
   }
 
+  // --- Settings ---
+  int getRestTime() {
+    return _settingsBox.get('rest_time', defaultValue: 90) as int;
+  }
+
+  Future<void> saveRestTime(int seconds) async {
+    await _settingsBox.put('rest_time', seconds);
+  }
+
   // --- Database Lifecycle (For Backup/Restore) ---
   Future<void> closeAll() async {
     await Hive.close();
@@ -96,5 +109,6 @@ class LocalDatabaseService {
     _activeWorkoutBox = await Hive.openBox<ActiveWorkout>(
       _activeWorkoutBoxName,
     );
+    _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
   }
 }
