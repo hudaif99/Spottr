@@ -21,10 +21,14 @@ class ActiveWorkoutAdapter extends TypeAdapter<ActiveWorkout> {
       planId: fields[1] as String,
       day: fields[2] as WorkoutDay,
       startTime: fields[3] as DateTime,
-      exerciseLogs: (fields[4] as Map).map((dynamic k, dynamic v) =>
-          MapEntry(k as String, (v as List).cast<SetLog>())),
-      previousExerciseLogs: (fields[5] as Map).map((dynamic k, dynamic v) =>
-          MapEntry(k as String, (v as List).cast<SetLog>())),
+      exerciseLogs: (fields[4] as Map).map(
+        (dynamic k, dynamic v) =>
+            MapEntry(k as String, (v as List).cast<SetLog>()),
+      ),
+      previousExerciseLogs: (fields[5] as Map).map(
+        (dynamic k, dynamic v) =>
+            MapEntry(k as String, (v as List).cast<SetLog>()),
+      ),
     );
   }
 

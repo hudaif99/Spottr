@@ -45,9 +45,9 @@ class VoltTextField extends StatelessWidget {
           obscureText: obscureText,
           onChanged: onChanged,
           validator: validator,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: context.colors.primaryText,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: context.colors.primaryText),
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(

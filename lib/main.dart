@@ -9,6 +9,9 @@ import 'presentation/blocs/workout/workout_event.dart';
 import 'presentation/blocs/timer/timer_bloc.dart';
 import 'presentation/blocs/history/history_bloc.dart';
 import 'presentation/blocs/history/history_event.dart';
+import 'presentation/blocs/settings/settings_bloc.dart';
+import 'presentation/blocs/settings/settings_event.dart';
+import 'presentation/blocs/settings/settings_state.dart';
 import 'presentation/screens/splash_screen.dart';
 
 void main() async {
@@ -31,14 +34,32 @@ class VoltApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<WorkoutBloc>()..add(ResumeWorkout())),
         BlocProvider(create: (_) => di.sl<TimerBloc>()),
         BlocProvider(create: (_) => di.sl<HistoryBloc>()..add(LoadHistory())),
+        BlocProvider(create: (_) => di.sl<SettingsBloc>()..add(LoadSettings())),
       ],
-      child: MaterialApp(
-        title: 'Volt',
-        theme: AppTheme.lightTheme,
-        darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
-        debugShowCheckedModeBanner: false,
-        home: const SplashScreen(),
+      child: BlocBuilder<SettingsBloc, SettingsState>(
+        builder: (context, settingsState) {
+          ThemeMode currentThemeMode;
+          switch (settingsState.themeMode) {
+            case 'light':
+              currentThemeMode = ThemeMode.light;
+              break;
+            case 'dark':
+              currentThemeMode = ThemeMode.dark;
+              break;
+            case 'system':
+            default:
+              currentThemeMode = ThemeMode.system;
+          }
+
+          return MaterialApp(
+            title: 'Volt',
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
+            themeMode: currentThemeMode,
+            debugShowCheckedModeBanner: false,
+            home: const SplashScreen(),
+          );
+        },
       ),
     );
   }

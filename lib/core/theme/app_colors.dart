@@ -16,7 +16,7 @@ class AppColors {
   // Text colors
   static const Color primaryText = Color(0xFFFFFFFF);
   static const Color secondaryText = Color(0xFF9A9A9A);
-  
+
   // Extra colors for specific UI elements
   static const Color divider = Color(0xFF2C2C2E);
 }

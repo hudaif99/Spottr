@@ -97,6 +97,42 @@ class LocalDatabaseService {
     await _settingsBox.put('rest_time', seconds);
   }
 
+  // --- Profile & Appearance ---
+  String? getUserName() => _settingsBox.get('user_name') as String?;
+  Future<void> saveUserName(String name) async =>
+      _settingsBox.put('user_name', name);
+
+  int? getUserAge() => _settingsBox.get('user_age') as int?;
+  Future<void> saveUserAge(int age) async => _settingsBox.put('user_age', age);
+
+  String? getUserGender() => _settingsBox.get('user_gender') as String?;
+  Future<void> saveUserGender(String gender) async =>
+      _settingsBox.put('user_gender', gender);
+
+  double? getUserHeight() => _settingsBox.get('user_height') as double?;
+  Future<void> saveUserHeight(double height) async =>
+      _settingsBox.put('user_height', height);
+
+  double? getUserWeight() => _settingsBox.get('user_weight') as double?;
+  Future<void> saveUserWeight(double weight) async =>
+      _settingsBox.put('user_weight', weight);
+
+  String getThemeMode() =>
+      _settingsBox.get('theme_mode', defaultValue: 'system') as String;
+  Future<void> saveThemeMode(String mode) async =>
+      _settingsBox.put('theme_mode', mode);
+
+  // --- Workout Preferences ---
+  bool getKeepScreenAwake() =>
+      _settingsBox.get('keep_screen_awake', defaultValue: true) as bool;
+  Future<void> saveKeepScreenAwake(bool keepAwake) async =>
+      _settingsBox.put('keep_screen_awake', keepAwake);
+
+  bool getPlayTimerSound() =>
+      _settingsBox.get('play_timer_sound', defaultValue: true) as bool;
+  Future<void> savePlayTimerSound(bool playSound) async =>
+      _settingsBox.put('play_timer_sound', playSound);
+
   // --- Database Lifecycle (For Backup/Restore) ---
   Future<void> closeAll() async {
     await Hive.close();

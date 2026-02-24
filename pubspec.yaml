@@ -47,6 +47,8 @@ dependencies:
   file_picker: ^10.3.10
   share_plus: ^12.0.1
   archive: ^4.0.9
+  wakelock_plus: ^1.4.0
+  audioplayers: ^6.5.1
 
 dev_dependencies:
   flutter_test:
@@ -73,8 +75,8 @@ flutter:
   uses-material-design: true
 
   # To add assets to your application, add an assets section, like this:
-  # assets:
-  #   - images/a_dot_burr.jpeg
+  assets:
+    - assets/sounds/
   #   - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

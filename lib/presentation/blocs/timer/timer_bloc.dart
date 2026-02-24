@@ -1,12 +1,17 @@
 import 'dart:async';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:audioplayers/audioplayers.dart';
+import '../../../data/datasources/local_database_service.dart';
 import 'timer_event.dart';
 import 'timer_state.dart';
 
 class TimerBloc extends Bloc<TimerEvent, TimerState> {
+  final LocalDatabaseService _localDbService;
   StreamSubscription<int>? _tickerSubscription;
+  final AudioPlayer _audioPlayer = AudioPlayer();
 
-  TimerBloc() : super(const TimerInitial()) {
+  TimerBloc(this._localDbService) : super(const TimerInitial()) {
     on<StartRestTimer>(_onStartRestTimer);
     on<StartStopwatch>(_onStartStopwatch);
     on<PauseTimer>(_onPauseTimer);
@@ -79,6 +84,14 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
   void _onTickTimer(TickTimer event, Emitter<TimerState> emit) {
     if (state.mode == TimerMode.countdown) {
       if (event.elapsedSeconds > 0) {
+        if (event.elapsedSeconds == 3 && _localDbService.getPlayTimerSound()) {
+          // Play the 3-beep sound when 3 seconds remain, to sync with the countdown
+          _audioPlayer.setVolume(1.0).then((_) {
+            _audioPlayer
+                .play(AssetSource('sounds/timer_done.mp3'))
+                .catchError((_) {});
+          });
+        }
         emit(
           TimerRunInProgress(
             mode: state.mode,
@@ -88,6 +101,9 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
         );
       } else {
         _tickerSubscription?.cancel();
+        if (_localDbService.getPlayTimerSound()) {
+          HapticFeedback.heavyImpact();
+        }
         emit(
           TimerRunComplete(
             mode: state.mode,
@@ -108,6 +124,7 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
   @override
   Future<void> close() {
     _tickerSubscription?.cancel();
+    _audioPlayer.dispose();
     return super.close();
   }
 }

@@ -26,7 +26,9 @@ class HistoryScreen extends StatelessWidget {
         builder: (context, state) {
           if (state is HistoryLoading) {
             return Center(
-              child: CircularProgressIndicator(color: context.colors.primaryAccent),
+              child: CircularProgressIndicator(
+                color: context.colors.primaryAccent,
+              ),
             );
           }
 
@@ -73,12 +75,16 @@ class HistoryScreen extends StatelessWidget {
                             Text(
                               log.dayName,
                               style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(color: context.colors.primaryAccent),
+                                  ?.copyWith(
+                                    color: context.colors.primaryAccent,
+                                  ),
                             ),
                             Text(
                               _formatDate(log.startTime),
                               style: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(color: context.colors.secondaryText),
+                                  ?.copyWith(
+                                    color: context.colors.secondaryText,
+                                  ),
                             ),
                           ],
                         ),

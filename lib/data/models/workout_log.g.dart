@@ -23,8 +23,10 @@ class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
       dayName: fields[3] as String,
       startTime: fields[4] as DateTime,
       endTime: fields[5] as DateTime?,
-      exerciseLogs: (fields[6] as Map).map((dynamic k, dynamic v) =>
-          MapEntry(k as String, (v as List).cast<SetLog>())),
+      exerciseLogs: (fields[6] as Map).map(
+        (dynamic k, dynamic v) =>
+            MapEntry(k as String, (v as List).cast<SetLog>()),
+      ),
     );
   }
 

@@ -7,6 +7,7 @@ import '../../presentation/blocs/workout/workout_bloc.dart';
 import '../../presentation/blocs/timer/timer_bloc.dart';
 import '../../presentation/blocs/history/history_bloc.dart';
 import '../../domain/repositories/workout_repository.dart';
+import '../../presentation/blocs/settings/settings_bloc.dart';
 
 final sl = GetIt.instance;
 
@@ -28,6 +29,7 @@ Future<void> initDI() async {
   // Blocs
   sl.registerFactory(() => PlansBloc(sl()));
   sl.registerFactory(() => WorkoutBloc(sl()));
-  sl.registerFactory(() => TimerBloc());
+  sl.registerFactory(() => TimerBloc(sl()));
   sl.registerFactory(() => HistoryBloc(sl()));
+  sl.registerFactory(() => SettingsBloc(sl()));
 }

@@ -7,6 +7,8 @@ import '../widgets/volt_button.dart';
 import '../widgets/volt_card.dart';
 import '../../data/datasources/local_database_service.dart';
 import '../../data/datasources/backup_restore_service.dart';
+import 'profile_appearance_screen.dart';
+import 'workout_preferences_screen.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
 import '../blocs/history/history_bloc.dart';
@@ -48,14 +50,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context,
                         Icons.person_outline,
                         'Profile & Appearance',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ProfileAppearanceScreen(),
+                          ),
+                        ),
                       ),
                       const Divider(),
                       _buildSettingRow(
                         context,
                         Icons.fitness_center,
                         'Workout Preferences',
-                        onTap: () => _showComingSoon(context),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const WorkoutPreferencesScreen(),
+                          ),
+                        ),
                       ),
                       const Divider(),
                       _buildSettingRow(
@@ -104,19 +116,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               child: const Center(child: CircularProgressIndicator()),
             ),
         ],
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'This feature will be available in a future update.',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: context.colors.surface,
-        duration: const Duration(seconds: 2),
       ),
     );
   }
