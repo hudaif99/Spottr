@@ -1,4 +1,4 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
@@ -13,8 +13,8 @@ import '../blocs/settings/settings_bloc.dart';
 import '../../data/models/set_log.dart';
 import '../../data/datasources/local_database_service.dart';
 import '../widgets/set_row.dart';
-import '../widgets/volt_button.dart';
-import '../widgets/volt_card.dart';
+import '../widgets/spottr_button.dart';
+import '../widgets/spottr_card.dart';
 
 class ActiveWorkoutScreen extends StatefulWidget {
   const ActiveWorkoutScreen({super.key});
@@ -160,7 +160,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16.0),
-                            child: VoltCard(
+                            child: SpottrCard(
                               padding: const EdgeInsets.all(20),
                               hasBorder: true,
                               child: Column(
@@ -348,9 +348,9 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                     );
                                   }),
                                   const SizedBox(height: 16),
-                                  VoltButton(
+                                  SpottrButton(
                                     text: '+ Add Set',
-                                    variant: VoltButtonVariant.outline,
+                                    variant: SpottrButtonVariant.outline,
                                     onPressed: () {
                                       context.read<WorkoutBloc>().add(
                                         AddSet(exercise.id),
@@ -373,7 +373,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              VoltButton(
+                              SpottrButton(
                                 text: 'Finish Workout',
                                 icon: Icon(
                                   Icons.check_circle_outline,

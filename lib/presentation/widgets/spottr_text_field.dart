@@ -1,7 +1,7 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 
-class VoltTextField extends StatelessWidget {
+class SpottrTextField extends StatelessWidget {
   final String label;
   final String hintText;
   final TextEditingController? controller;
@@ -12,7 +12,7 @@ class VoltTextField extends StatelessWidget {
   final void Function(String)? onChanged;
   final String? Function(String?)? validator;
 
-  const VoltTextField({
+  const SpottrTextField({
     super.key,
     required this.label,
     this.hintText = '',

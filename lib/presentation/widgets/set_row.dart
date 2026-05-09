@@ -1,4 +1,4 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../data/models/set_log.dart';

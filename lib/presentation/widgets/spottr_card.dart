@@ -1,7 +1,7 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 
-class VoltCard extends StatelessWidget {
+class SpottrCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
@@ -9,7 +9,7 @@ class VoltCard extends StatelessWidget {
   final bool hasBorder;
   final Color? borderColor;
 
-  const VoltCard({
+  const SpottrCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16.0),

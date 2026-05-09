@@ -1,4 +1,4 @@
-# volt
+# Spottr
 
 A new Flutter project.
 

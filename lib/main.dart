@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/theme/app_theme.dart';
 import 'core/di/injection_container.dart' as di;
@@ -15,16 +16,21 @@ import 'presentation/blocs/settings/settings_state.dart';
 import 'presentation/screens/splash_screen.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  // Keep the native splash visible while initialisation runs
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   // Initialize DI and Hive internally
   await di.initDI();
 
-  runApp(const VoltApp());
+  // Remove native splash — Flutter's own SplashScreen takes over
+  FlutterNativeSplash.remove();
+
+  runApp(const SpottrApp());
 }
 
-class VoltApp extends StatelessWidget {
-  const VoltApp({super.key});
+class SpottrApp extends StatelessWidget {
+  const SpottrApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -52,7 +58,7 @@ class VoltApp extends StatelessWidget {
           }
 
           return MaterialApp(
-            title: 'Volt',
+            title: 'Spottr',
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: currentThemeMode,

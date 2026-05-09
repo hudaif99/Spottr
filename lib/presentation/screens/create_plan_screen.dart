@@ -1,4 +1,4 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
@@ -7,7 +7,7 @@ import '../../data/models/workout_day.dart';
 import '../../data/models/exercise.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
-import '../widgets/volt_button.dart';
+import '../widgets/spottr_button.dart';
 
 class CreatePlanScreen extends StatefulWidget {
   final Plan? plan;
@@ -362,9 +362,9 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                 );
               }),
               const SizedBox(height: 16),
-              VoltButton(
+              SpottrButton(
                 text: 'Add Workout Day',
-                variant: VoltButtonVariant.outline,
+                variant: SpottrButtonVariant.outline,
                 icon: Icon(
                   Icons.add_circle_outline,
                   color: context.colors.primaryText,

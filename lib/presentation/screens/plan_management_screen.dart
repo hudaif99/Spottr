@@ -1,11 +1,11 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
 import '../blocs/plans/plans_state.dart';
-import '../widgets/volt_card.dart';
-import '../widgets/volt_button.dart';
+import '../widgets/spottr_card.dart';
+import '../widgets/spottr_button.dart';
 import 'create_plan_screen.dart';
 import 'package:animated_list_plus/animated_list_plus.dart';
 import 'package:animated_list_plus/transitions.dart';
@@ -90,7 +90,7 @@ class PlanManagementScreen extends StatelessWidget {
           const SizedBox(height: 32),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: VoltButton(
+            child: SpottrButton(
               text: 'Create Plan',
               onPressed: () {
                 Navigator.of(context).push(
@@ -121,7 +121,7 @@ class PlanManagementScreen extends StatelessWidget {
           animation: animation,
           child: Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
-            child: VoltCard(
+            child: SpottrCard(
               color: context.colors.surface,
               hasBorder: true,
               borderColor: plan.isActive ? context.colors.primaryAccent : null,
@@ -252,13 +252,13 @@ class PlanManagementScreen extends StatelessWidget {
                   Row(
                     children: [
                       Expanded(
-                        child: VoltButton(
+                        child: SpottrButton(
                           text: plan.isActive
                               ? 'Current Plan'
                               : 'Set as Active',
                           variant: plan.isActive
-                              ? VoltButtonVariant.secondary
-                              : VoltButtonVariant.outline,
+                              ? SpottrButtonVariant.secondary
+                              : SpottrButtonVariant.outline,
                           icon: plan.isActive
                               ? Icon(
                                   Icons.fitness_center,

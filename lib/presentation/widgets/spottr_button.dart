@@ -1,30 +1,30 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-enum VoltButtonVariant { primary, secondary, outline, ghost }
+enum SpottrButtonVariant { primary, secondary, outline, ghost }
 
-class VoltButton extends StatefulWidget {
+class SpottrButton extends StatefulWidget {
   final String text;
   final VoidCallback? onPressed;
-  final VoltButtonVariant variant;
+  final SpottrButtonVariant variant;
   final bool isLoading;
   final Widget? icon;
 
-  const VoltButton({
+  const SpottrButton({
     super.key,
     required this.text,
     this.onPressed,
-    this.variant = VoltButtonVariant.primary,
+    this.variant = SpottrButtonVariant.primary,
     this.isLoading = false,
     this.icon,
   });
 
   @override
-  State<VoltButton> createState() => _VoltButtonState();
+  State<SpottrButton> createState() => _SpottrButtonState();
 }
 
-class _VoltButtonState extends State<VoltButton>
+class _SpottrButtonState extends State<SpottrButton>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
@@ -68,30 +68,30 @@ class _VoltButtonState extends State<VoltButton>
 
   Color get _backgroundColor {
     switch (widget.variant) {
-      case VoltButtonVariant.primary:
+      case SpottrButtonVariant.primary:
         return context.colors.primaryAccent;
-      case VoltButtonVariant.secondary:
+      case SpottrButtonVariant.secondary:
         return context.colors.surface;
-      case VoltButtonVariant.outline:
+      case SpottrButtonVariant.outline:
         return Colors.transparent;
-      case VoltButtonVariant.ghost:
+      case SpottrButtonVariant.ghost:
         return Colors.transparent;
     }
   }
 
   Color get _textColor {
     switch (widget.variant) {
-      case VoltButtonVariant.primary:
+      case SpottrButtonVariant.primary:
         return context.colors.background;
-      case VoltButtonVariant.secondary:
-      case VoltButtonVariant.outline:
-      case VoltButtonVariant.ghost:
+      case SpottrButtonVariant.secondary:
+      case SpottrButtonVariant.outline:
+      case SpottrButtonVariant.ghost:
         return context.colors.primaryText;
     }
   }
 
   Border? get _border {
-    if (widget.variant == VoltButtonVariant.outline) {
+    if (widget.variant == SpottrButtonVariant.outline) {
       return Border.all(color: context.colors.divider, width: 1);
     }
     return null;

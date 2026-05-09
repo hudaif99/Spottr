@@ -1,6 +1,6 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
-import '../widgets/volt_card.dart';
+import '../widgets/spottr_card.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/plan.dart';
 import '../blocs/plans/plans_bloc.dart';
@@ -22,13 +22,27 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          'Volt',
-          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            color: context.colors.primaryAccent,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.5,
-          ),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.asset(
+                'assets/ic/spottr_icon.png',
+                width: 32,
+                height: 32,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Text(
+              'Spottr',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                color: context.colors.primaryAccent,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ],
         ),
         actions: [
           IconButton(
@@ -150,7 +164,7 @@ class HomeScreen extends StatelessWidget {
             return Row(
               children: [
                 Expanded(
-                  child: VoltCard(
+                  child: SpottrCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -170,7 +184,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 16),
                 Expanded(
-                  child: VoltCard(
+                  child: SpottrCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -204,7 +218,7 @@ class HomeScreen extends StatelessWidget {
       children: [
         Text('Manage', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
-        VoltCard(
+        SpottrCard(
           onTap: () {
             Navigator.of(context).push(
               MaterialPageRoute(builder: (_) => const PlanManagementScreen()),
@@ -241,7 +255,7 @@ class HomeScreen extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        VoltCard(
+        SpottrCard(
           onTap: () {
             Navigator.of(
               context,

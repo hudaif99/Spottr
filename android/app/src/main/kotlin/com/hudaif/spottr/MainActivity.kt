@@ -1,4 +1,4 @@
-package com.hudaif.volt.volt
+package com.hudaif.spottr
 
 import io.flutter.embedding.android.FlutterActivity
 

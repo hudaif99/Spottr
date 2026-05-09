@@ -1,9 +1,9 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_state.dart';
-import '../widgets/volt_card.dart';
+import '../widgets/spottr_card.dart';
 
 class HistoryScreen extends StatelessWidget {
   const HistoryScreen({super.key});
@@ -65,7 +65,7 @@ class HistoryScreen extends StatelessWidget {
                 final log = state.logs[index];
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12.0),
-                  child: VoltCard(
+                  child: SpottrCard(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [

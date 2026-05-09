@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import '../../data/models/plan.dart';
 import '../../data/models/workout_day.dart';
 import '../blocs/history/history_bloc.dart';
@@ -8,8 +8,8 @@ import '../blocs/history/history_state.dart';
 import '../blocs/workout/workout_bloc.dart';
 import '../blocs/workout/workout_event.dart';
 import '../blocs/workout/workout_state.dart';
-import '../widgets/volt_button.dart';
-import '../widgets/volt_card.dart';
+import '../widgets/spottr_button.dart';
+import '../widgets/spottr_card.dart';
 import '../screens/active_workout_screen.dart';
 import '../screens/plan_management_screen.dart';
 
@@ -119,7 +119,7 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
     final activePlan = widget.activePlan;
 
     if (activePlan == null) {
-      return VoltCard(
+      return SpottrCard(
         padding: const EdgeInsets.all(24),
         hasBorder: true,
         child: Column(
@@ -135,7 +135,7 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
               style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 24),
-            VoltButton(
+            SpottrButton(
               text: 'Create Plan',
               icon: Icon(Icons.add, color: context.colors.background),
               onPressed: () {
@@ -157,7 +157,7 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
           _computeNextDay();
         }
       },
-      child: VoltCard(
+      child: SpottrCard(
         padding: EdgeInsets.zero,
         hasBorder: true,
         child: Column(
@@ -318,7 +318,7 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
                               children: [
                                 Expanded(
                                   flex: 2,
-                                  child: VoltButton(
+                                  child: SpottrButton(
                                     text: 'Resume',
                                     icon: Icon(
                                       Icons.play_arrow_rounded,
@@ -337,9 +337,9 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
                                 const SizedBox(width: 8),
                                 Expanded(
                                   flex: 1,
-                                  child: VoltButton(
+                                  child: SpottrButton(
                                     text: 'Reset',
-                                    variant: VoltButtonVariant.outline,
+                                    variant: SpottrButtonVariant.outline,
                                     onPressed: () {
                                       context.read<WorkoutBloc>().add(
                                         CancelWorkout(),
@@ -357,7 +357,7 @@ class _ActivePlanCardState extends State<ActivePlanCard> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 8),
-                          VoltButton(
+                          SpottrButton(
                             text: 'Start ${_selectedDay?.name ?? "Workout"}',
                             icon: Icon(
                               Icons.play_arrow_rounded,

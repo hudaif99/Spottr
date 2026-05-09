@@ -1,4 +1,4 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'home_screen.dart';
 
@@ -12,39 +12,32 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _glowAnimation;
   late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    );
-
-    _glowAnimation = Tween<double>(begin: 0.0, end: 15.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.2, 0.6, curve: Curves.easeInOut),
-      ),
+      duration: const Duration(milliseconds: 600),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.4, curve: Curves.easeIn),
-      ),
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
 
     _controller.forward().then((_) {
-      // Navigate to Home
-      Future.delayed(const Duration(milliseconds: 500), () {
+      Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
               pageBuilder: (_, __, ___) => const HomeScreen(),
-              transitionDuration: const Duration(milliseconds: 800),
+              transitionDuration: const Duration(milliseconds: 400),
               transitionsBuilder: (_, animation, __, child) {
                 return FadeTransition(opacity: animation, child: child);
               },
@@ -66,33 +59,33 @@ class _SplashScreenState extends State<SplashScreen>
     return Scaffold(
       backgroundColor: context.colors.background,
       body: Center(
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: Container(
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: context.colors.primaryAccent.withOpacity(0.3),
-                      blurRadius: _glowAnimation.value,
-                      spreadRadius: _glowAnimation.value / 2,
-                    ),
-                  ],
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  'Volt',
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    color: context.colors.primaryAccent,
-                    fontSize: 48,
-                    letterSpacing: 2,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(28),
+                  child: Image.asset(
+                    'assets/ic/spottr_icon.png',
+                    width: 100,
+                    height: 100,
                   ),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: 20),
+                Text(
+                  'Spottr',
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    color: context.colors.primaryAccent,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 3,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

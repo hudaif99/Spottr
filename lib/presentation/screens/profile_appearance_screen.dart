@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import '../blocs/settings/settings_bloc.dart';
 import '../blocs/settings/settings_event.dart';
 import '../blocs/settings/settings_state.dart';
-import '../widgets/volt_button.dart';
-import '../widgets/volt_text_field.dart';
+import '../widgets/spottr_button.dart';
+import '../widgets/spottr_text_field.dart';
 
 class ProfileAppearanceScreen extends StatefulWidget {
   const ProfileAppearanceScreen({super.key});
@@ -240,7 +240,7 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                VoltTextField(
+                SpottrTextField(
                   label: 'Name',
                   hintText: 'Enter your name',
                   controller: _nameCtrl,
@@ -249,7 +249,7 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: VoltTextField(
+                      child: SpottrTextField(
                         label: 'Age',
                         hintText: 'Years',
                         controller: _ageCtrl,
@@ -262,7 +262,7 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: VoltTextField(
+                      child: SpottrTextField(
                         label: 'Height',
                         hintText: 'cm',
                         controller: _heightCtrl,
@@ -274,7 +274,7 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      child: VoltTextField(
+                      child: SpottrTextField(
                         label: 'Weight',
                         hintText: 'kg',
                         controller: _weightCtrl,
@@ -292,7 +292,7 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
                   double.tryParse(_weightCtrl.text),
                 ),
                 const SizedBox(height: 48),
-                VoltButton(text: 'Save Changes', onPressed: _saveProfile),
+                SpottrButton(text: 'Save Changes', onPressed: _saveProfile),
               ],
             ),
           );

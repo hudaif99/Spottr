@@ -1,10 +1,10 @@
-import 'package:volt/core/theme/app_colors_extension.dart';
+import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import '../widgets/volt_button.dart';
-import '../widgets/volt_card.dart';
+import '../widgets/spottr_button.dart';
+import '../widgets/spottr_card.dart';
 import '../../data/datasources/local_database_service.dart';
 import '../../data/datasources/backup_restore_service.dart';
 import 'profile_appearance_screen.dart';
@@ -42,7 +42,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                VoltCard(
+                SpottrCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
@@ -91,8 +91,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Center(
                   child: Column(
                     children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.asset(
+                          'assets/ic/spottr_icon.png',
+                          width: 64,
+                          height: 64,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
                       Text(
-                        'Volt v1.0.0',
+                        'Spottr v1.0.0',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: context.colors.secondaryText,
                         ),
@@ -389,7 +398,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                VoltButton(
+                SpottrButton(
                   text: 'Export Backup (.zip)',
                   icon: Icon(
                     Icons.upload_file,
@@ -401,9 +410,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
-                VoltButton(
+                SpottrButton(
                   text: 'Restore from Backup',
-                  variant: VoltButtonVariant.outline,
+                  variant: SpottrButtonVariant.outline,
                   icon: Icon(Icons.restore, color: context.colors.primaryText),
                   onPressed: () {
                     Navigator.of(sheetContext).pop();

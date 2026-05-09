@@ -37,7 +37,7 @@ class BackupRestoreService {
         final zipData = ZipEncoder().encode(archive);
 
         final tempDir = await getTemporaryDirectory();
-        final zipFilePath = '${tempDir.path}/volt_backup.zip';
+        final zipFilePath = '${tempDir.path}/spottr_backup.zip';
         final zipFile = File(zipFilePath);
         await zipFile.writeAsBytes(zipData, flush: true);
 
@@ -46,7 +46,7 @@ class BackupRestoreService {
         );
 
         final xFile = XFile(zipFilePath, mimeType: 'application/zip');
-        await Share.shareXFiles([xFile], subject: 'Volt Workout Backup');
+        await Share.shareXFiles([xFile], subject: 'Spottr Workout Backup');
 
         return null;
       } finally {
