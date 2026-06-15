@@ -5,12 +5,14 @@ import '../models/set_log.dart';
 import '../models/workout_day.dart';
 import '../models/workout_log.dart';
 import '../models/active_workout.dart';
+import '../models/workout_schedule.dart';
 
 class LocalDatabaseService {
   static const String _plansBoxName = 'plans_box';
   static const String _exercisesBoxName = 'exercises_box';
   static const String _workoutLogsBoxName = 'workout_logs_box';
   static const String _activeWorkoutBoxName = 'active_workout_box';
+  static const String _workoutScheduleBoxName = 'workout_schedule_box';
 
   static const String _settingsBoxName = 'settings_box';
 
@@ -18,6 +20,7 @@ class LocalDatabaseService {
   late Box<Exercise> _exercisesBox;
   late Box<WorkoutLog> _workoutLogsBox;
   late Box<ActiveWorkout> _activeWorkoutBox;
+  late Box<WorkoutSchedule> _workoutScheduleBox;
   late Box<dynamic> _settingsBox;
 
   Future<void> init() async {
@@ -42,6 +45,9 @@ class LocalDatabaseService {
     if (!Hive.isAdapterRegistered(5)) {
       Hive.registerAdapter(ActiveWorkoutAdapter());
     }
+    if (!Hive.isAdapterRegistered(6)) {
+      Hive.registerAdapter(WorkoutScheduleAdapter());
+    }
 
     // Open Boxes
     _plansBox = await Hive.openBox<Plan>(_plansBoxName);
@@ -50,6 +56,8 @@ class LocalDatabaseService {
     _activeWorkoutBox = await Hive.openBox<ActiveWorkout>(
       _activeWorkoutBoxName,
     );
+    _workoutScheduleBox =
+        await Hive.openBox<WorkoutSchedule>(_workoutScheduleBoxName);
     _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
   }
 
@@ -133,6 +141,31 @@ class LocalDatabaseService {
   Future<void> savePlayTimerSound(bool playSound) async =>
       _settingsBox.put('play_timer_sound', playSound);
 
+  // --- Workout Schedule ---
+
+  /// Returns null if no schedule has been configured yet.
+  WorkoutSchedule? getWorkoutSchedule() {
+    if (_workoutScheduleBox.isEmpty) return null;
+    return _workoutScheduleBox.getAt(0);
+  }
+
+  Future<void> saveWorkoutSchedule(WorkoutSchedule schedule) async {
+    await _workoutScheduleBox.clear();
+    await _workoutScheduleBox.add(schedule);
+  }
+
+  Future<void> deleteWorkoutSchedule() async {
+    await _workoutScheduleBox.clear();
+  }
+
+  // --- Onboarding ---
+
+  bool isOnboardingCompleted() =>
+      _settingsBox.get('onboarding_completed', defaultValue: false) as bool;
+
+  Future<void> setOnboardingCompleted() async =>
+      _settingsBox.put('onboarding_completed', true);
+
   // --- Database Lifecycle (For Backup/Restore) ---
   Future<void> closeAll() async {
     await Hive.close();
@@ -145,6 +178,8 @@ class LocalDatabaseService {
     _activeWorkoutBox = await Hive.openBox<ActiveWorkout>(
       _activeWorkoutBoxName,
     );
+    _workoutScheduleBox =
+        await Hive.openBox<WorkoutSchedule>(_workoutScheduleBoxName);
     _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
   }
 }

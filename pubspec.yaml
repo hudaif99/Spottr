@@ -17,7 +17,6 @@ dependencies:
   get_it: ^9.2.1
   equatable: ^2.0.8
   path_provider: ^2.1.5
-  google_fonts: ^8.0.2
   intl: ^0.20.2
   uuid: ^4.5.3
   animated_list_plus: ^0.5.2
@@ -26,6 +25,9 @@ dependencies:
   archive: ^4.0.9
   wakelock_plus: ^1.4.0
   audioplayers: ^6.5.1
+  flutter_local_notifications: ^18.0.1
+  timezone: ^0.9.4
+  flutter_timezone: ^5.1.0
 
 dev_dependencies:
   flutter_test:
@@ -57,3 +59,20 @@ flutter:
   assets:
     - assets/sounds/
     - assets/ic/
+    - assets/fonts/
+
+  fonts:
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Thin.ttf
+          weight: 100
+        - asset: assets/fonts/Outfit-Light.ttf
+          weight: 300
+        - asset: assets/fonts/Outfit-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Outfit-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Outfit-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Outfit-Bold.ttf
+          weight: 700

@@ -1,6 +1,9 @@
 import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import '../../data/datasources/local_database_service.dart';
 import 'home_screen.dart';
+import 'onboarding/onboarding_flow_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -34,9 +37,14 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
+          final isCompleted =
+              GetIt.I<LocalDatabaseService>().isOnboardingCompleted();
+          final destination =
+              isCompleted ? const HomeScreen() : const OnboardingFlowScreen();
+
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const HomeScreen(),
+              pageBuilder: (_, __, ___) => destination,
               transitionDuration: const Duration(milliseconds: 400),
               transitionsBuilder: (_, animation, __, child) {
                 return FadeTransition(opacity: animation, child: child);

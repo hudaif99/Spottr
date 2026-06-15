@@ -9,6 +9,7 @@ import '../../data/datasources/local_database_service.dart';
 import '../../data/datasources/backup_restore_service.dart';
 import 'profile_appearance_screen.dart';
 import 'workout_preferences_screen.dart';
+import 'workout_schedule_settings_screen.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
 import '../blocs/history/history_bloc.dart';
@@ -42,6 +43,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ── Workout Schedule ─────────────────────────────────────
+                Text(
+                  'Workout Schedule',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: context.colors.secondaryText,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SpottrCard(
+                  padding: const EdgeInsets.all(16),
+                  child: _buildSettingRow(
+                    context,
+                    Icons.schedule_outlined,
+                    'Workout Schedule',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            const WorkoutScheduleSettingsScreen(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
                 SpottrCard(
                   padding: const EdgeInsets.all(16),
                   child: Column(

@@ -13,6 +13,8 @@ import 'presentation/blocs/history/history_event.dart';
 import 'presentation/blocs/settings/settings_bloc.dart';
 import 'presentation/blocs/settings/settings_event.dart';
 import 'presentation/blocs/settings/settings_state.dart';
+import 'presentation/blocs/schedule/schedule_bloc.dart';
+import 'presentation/blocs/schedule/schedule_event.dart';
 import 'presentation/screens/splash_screen.dart';
 
 void main() async {
@@ -41,6 +43,7 @@ class SpottrApp extends StatelessWidget {
         BlocProvider(create: (_) => di.sl<TimerBloc>()),
         BlocProvider(create: (_) => di.sl<HistoryBloc>()..add(LoadHistory())),
         BlocProvider(create: (_) => di.sl<SettingsBloc>()..add(LoadSettings())),
+        BlocProvider(create: (_) => di.sl<ScheduleBloc>()..add(LoadSchedule())),
       ],
       child: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, settingsState) {

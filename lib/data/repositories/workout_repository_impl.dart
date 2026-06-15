@@ -4,6 +4,7 @@ import '../models/exercise.dart';
 import '../models/plan.dart';
 import '../models/workout_log.dart';
 import '../models/active_workout.dart';
+import '../models/workout_schedule.dart';
 
 class WorkoutRepositoryImpl implements WorkoutRepository {
   final LocalDatabaseService _localDb;
@@ -95,5 +96,10 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   @override
   Future<void> clearActiveWorkout() async {
     await _localDb.clearActiveWorkout();
+  }
+
+  @override
+  Future<WorkoutSchedule?> getScheduleForToday() async {
+    return _localDb.getWorkoutSchedule();
   }
 }

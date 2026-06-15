@@ -2,6 +2,7 @@ import '../../data/models/plan.dart';
 import '../../data/models/workout_log.dart';
 import '../../data/models/exercise.dart';
 import '../../data/models/active_workout.dart';
+import '../../data/models/workout_schedule.dart';
 
 abstract class WorkoutRepository {
   // Plans
@@ -25,4 +26,7 @@ abstract class WorkoutRepository {
   ActiveWorkout? getActiveWorkout();
   Future<void> saveActiveWorkout(ActiveWorkout workout);
   Future<void> clearActiveWorkout();
+
+  // Schedule (read-only access for notification hooks)
+  Future<WorkoutSchedule?> getScheduleForToday();
 }

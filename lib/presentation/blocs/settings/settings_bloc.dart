@@ -38,12 +38,15 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   ) async {
     if (event.name != null) await _localDbService.saveUserName(event.name!);
     if (event.age != null) await _localDbService.saveUserAge(event.age!);
-    if (event.gender != null)
+    if (event.gender != null) {
       await _localDbService.saveUserGender(event.gender!);
-    if (event.height != null)
+    }
+    if (event.height != null) {
       await _localDbService.saveUserHeight(event.height!);
-    if (event.weight != null)
+    }
+    if (event.weight != null) {
       await _localDbService.saveUserWeight(event.weight!);
+    }
 
     emit(
       state.copyWith(

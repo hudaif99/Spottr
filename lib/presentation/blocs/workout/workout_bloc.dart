@@ -4,14 +4,16 @@ import '../../../data/models/set_log.dart';
 import '../../../data/models/workout_log.dart';
 import '../../../data/models/active_workout.dart';
 import '../../../domain/repositories/workout_repository.dart';
+import '../../../notifications/workout_reminder_scheduler.dart';
 import 'workout_event.dart';
 import 'workout_state.dart';
 
 class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
   final WorkoutRepository _repository;
+  final WorkoutReminderScheduler _scheduler;
   final _uuid = const Uuid();
 
-  WorkoutBloc(this._repository) : super(WorkoutInitial()) {
+  WorkoutBloc(this._repository, this._scheduler) : super(WorkoutInitial()) {
     on<StartWorkout>(_onStartWorkout);
     on<AddSet>(_onAddSet);
     on<UpdateSet>(_onUpdateSet);
@@ -92,6 +94,15 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
 
     await _saveProgress(newState);
     emit(newState);
+
+    // Cancel today's missed-workout reminder — the user has started training.
+    // It will be rescheduled for next week automatically.
+    try {
+      final schedule = await _repository.getScheduleForToday();
+      if (schedule != null) {
+        await _scheduler.cancelAndRescheduleTodaysMissedWorkout(schedule);
+      }
+    } catch (_) { /* non-critical */ }
   }
 
   void _onAddSet(AddSet event, Emitter<WorkoutState> emit) {
@@ -201,6 +212,10 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       try {
         await _repository.saveWorkoutLog(workoutLog);
         await _repository.clearActiveWorkout();
+
+        // —— Post-workout notification hooks ——
+        await _handlePostWorkoutNotifications(currentState, workoutLog);
+
         emit(WorkoutCompleted());
         // Reset state after completion so we can start another one later
         emit(WorkoutInitial());
@@ -208,6 +223,84 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         emit(WorkoutError('Failed to save workout: $e'));
       }
     }
+  }
+
+  // ─────────────────────────── Post-workout notification logic
+
+  Future<void> _handlePostWorkoutNotifications(
+    WorkoutInProgress currentState,
+    WorkoutLog savedLog,
+  ) async {
+    try {
+      final schedule = await _repository.getScheduleForToday();
+
+      // Cancel today’s missed-workout and streak reminders.
+      if (schedule != null) {
+        await _scheduler.cancelAndRescheduleTodaysMissedWorkout(schedule);
+      }
+      await _scheduler.cancelStreakReminder();
+
+      // ── Milestone detection ─────────────────────────────────
+      final allLogs = await _repository.getWorkoutLogs();
+      const milestones = [1, 10, 25, 50, 100, 365];
+      if (milestones.contains(allLogs.length)) {
+        await _scheduler.showMilestoneNotification(allLogs.length);
+        return; // Milestone takes priority over PR
+      }
+
+      // ── Personal Record detection ────────────────────────────
+      // Build historical best per exercise (weight, reps).
+      final historicalBests = <String, ({double weight, int reps})>{};
+      for (final log in allLogs) {
+        if (log.id == savedLog.id) continue; // exclude current session
+        for (final entry in log.exerciseLogs.entries) {
+          for (final set in entry.value) {
+            if (!set.isCompleted) continue;
+            final prev = historicalBests[entry.key];
+            if (prev == null ||
+                set.weight > prev.weight ||
+                (set.weight == prev.weight && set.reps > prev.reps)) {
+              historicalBests[entry.key] = (weight: set.weight, reps: set.reps);
+            }
+          }
+        }
+      }
+
+      // Check current session for new records.
+      bool hasNewPR = false;
+      String prDetail = '';
+
+      for (final entry in savedLog.exerciseLogs.entries) {
+        for (final set in entry.value) {
+          if (!set.isCompleted) continue;
+          final prev = historicalBests[entry.key];
+          if (prev == null || set.weight > prev.weight ||
+              (set.weight == prev.weight && set.reps > prev.reps)) {
+            hasNewPR = true;
+            prDetail = '${set.weight}kg × ${set.reps} reps — new best!';
+            break;
+          }
+        }
+        if (hasNewPR) break;
+      }
+
+      // Check session duration record.
+      if (!hasNewPR) {
+        final currentDuration = savedLog.totalDurationInSeconds;
+        final maxPrevDuration = allLogs
+            .where((l) => l.id != savedLog.id)
+            .fold<int>(0, (m, l) => l.totalDurationInSeconds > m ? l.totalDurationInSeconds : m);
+        if (currentDuration > maxPrevDuration && maxPrevDuration > 0) {
+          hasNewPR = true;
+          final mins = currentDuration ~/ 60;
+          prDetail = 'Longest workout yet: ${mins}m!';
+        }
+      }
+
+      if (hasNewPR) {
+        await _scheduler.showPersonalRecordNotification(prDetail);
+      }
+    } catch (_) { /* non-critical — never block workout save */ }
   }
 
   Future<void> _onCancelWorkout(

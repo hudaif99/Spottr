@@ -229,80 +229,14 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                     ],
                                   ),
                                   const SizedBox(height: 12),
-                                  GestureDetector(
-                                    onTap: bestSet == null
-                                        ? null
-                                        : () {
-                                            // Auto-fill empty sets
-                                            for (final log in logs) {
-                                              if (log.weight == 0 &&
-                                                  log.reps == 0 &&
-                                                  !log.isCompleted) {
-                                                context.read<WorkoutBloc>().add(
-                                                  UpdateSet(
-                                                    exerciseId: exercise.id,
-                                                    setLog: log.copyWith(
-                                                      // ignore: unnecessary_non_null_assertion
-                                                      weight: bestSet!.weight,
-                                                      // ignore: unnecessary_non_null_assertion
-                                                      reps: bestSet!.reps,
-                                                    ),
-                                                  ),
-                                                );
-                                              }
-                                            }
-                                          },
-                                    child: AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 200,
-                                      ),
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: bestSet != null
-                                            ? context.colors.primaryAccent
-                                                  .withValues(alpha: 0.1)
-                                            : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            bestSet != null
-                                                ? Icons.copy
-                                                : Icons.history,
-                                            size: 14,
-                                            color: bestSet != null
-                                                ? context.colors.primaryAccent
-                                                : context.colors.secondaryText,
-                                          ),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            bestSet != null
-                                                ? "Copy $previousText"
-                                                : previousText,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodyMedium
-                                                ?.copyWith(
-                                                  color: bestSet != null
-                                                      ? context
-                                                            .colors
-                                                            .primaryAccent
-                                                      : context
-                                                            .colors
-                                                            .secondaryText,
-                                                  fontWeight: bestSet != null
-                                                      ? FontWeight.w600
-                                                      : FontWeight.normal,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
+                                  Text(
+                                    previousText,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .bodyMedium
+                                        ?.copyWith(
+                                          color: context.colors.secondaryText,
+                                        ),
                                   ),
                                   const SizedBox(height: 16),
                                   ...List.generate(logs.length, (setIndex) {
