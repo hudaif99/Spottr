@@ -24,6 +24,9 @@ class ActiveWorkout extends HiveObject {
   @HiveField(5)
   final Map<String, List<SetLog>> previousExerciseLogs;
 
+  @HiveField(6)
+  final DateTime? restUntil;
+
   ActiveWorkout({
     required this.workoutLogId,
     required this.planId,
@@ -31,5 +34,6 @@ class ActiveWorkout extends HiveObject {
     required this.startTime,
     required this.exerciseLogs,
     this.previousExerciseLogs = const {},
+    this.restUntil,
   });
 }

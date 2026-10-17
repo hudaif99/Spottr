@@ -24,13 +24,15 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       targetWeight: fields[4] as double?,
       restDurationSeconds: fields[5] as int,
       imageUrl: fields[6] as String?,
+      note: fields[7] == null ? '' : fields[7] as String,
+      useDefaultRest: fields[8] == null ? true : fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, Exercise obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +46,11 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       ..writeByte(5)
       ..write(obj.restDurationSeconds)
       ..writeByte(6)
-      ..write(obj.imageUrl);
+      ..write(obj.imageUrl)
+      ..writeByte(7)
+      ..write(obj.note)
+      ..writeByte(8)
+      ..write(obj.useDefaultRest);
   }
 
   @override

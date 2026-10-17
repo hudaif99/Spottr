@@ -99,6 +99,9 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }
 
   @override
+  int getDefaultRestTime() => _localDb.getRestTime();
+
+  @override
   Future<WorkoutSchedule?> getScheduleForToday() async {
     return _localDb.getWorkoutSchedule();
   }

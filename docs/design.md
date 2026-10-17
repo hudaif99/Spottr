@@ -1,10 +1,64 @@
 # Spottr design guide
 
+## Current visual specification
+
+On 13 October 2026 the user rejected the latest Stitch concepts and chose to
+continue with the existing Flutter UI. Keep the implemented warm off-white,
+forest/clay light theme, deep green/sage dark theme, and bundled Outfit typography.
+The current theme source is `lib/core/theme/app_theme.dart`, with shared typography
+in `lib/core/theme/app_typography.dart`. Improve this direction through actual
+Flutter screens rather than more generated concepts.
+
+Proposed next polish: tighter workout hierarchy and spacing, shorter previous-set
+context, quieter Today headings, keyboard-friendly exercise editing, consistent
+secondary screens, and purposeful motion. These are suggestions, not completed work.
+Both themes, compact screens and large text must be reviewed during implementation.
+
+### Stitch directions — rejected history
+
+The user provisionally accepted **Spottr · Reference-led Workout** on 12 October
+2026 and requested a focused cleanup. This is the current working light anchor;
+see the [image-reference pass](stitch-image-reference-pass.md) for the refinements.
+The previous light/dark pair remains rejected. Dark mode and the connected screens
+still need review before Flutter implementation. Exact tokens remain revisable.
+
+The user agreed on 12 October 2026 to combine the healthcare reference's soft
+composition and rounded forms with the nutrition reference's warmth and accent
+treatment. All earlier generated concepts were rejected.
+
+[DESIGN.md](../DESIGN.md) is the current shared specification, with
+[semantic tokens](design-tokens.json) and the
+[first reference-informed workout prompt](stitch-reference-workout-prompt.md).
+The direction is agreed; the [previous pair](stitch-light-dark-review.md) is a
+historical rejected exploration. Both themes must be designed before
+Flutter implementation, with deliberate dark surface/contrast choices. Flutter
+code remains on the earlier implementation theme until a slice is authorized.
+
 ## Direction
 
-Calm, confident, and energetic. Favor clear hierarchy, generous spacing, and readable numbers.
-Exact colors, typography, icons, and component shapes will be chosen through visual concepts.
-The earlier warm-white/charcoal palette is a candidate, not a locked decision.
+Soft cool-gray backgrounds, white rounded surfaces, crisp dark Inter typography,
+coral primary actions with readable ink labels, and quiet sage completion feedback.
+Use controlled neutral elevation on the main logging panel, open exercise context,
+and quieter completed rows. Dark mode mirrors hierarchy using charcoal surfaces.
+These tokens are proposed adaptations, not measurements extracted from Behance.
+The references' photographs, tilted hardware, lighting and promotional presentation
+do not belong in the logging UI. Keep source attribution in DESIGN.md.
+
+## Design authorship
+
+The UI should feel thoughtfully designed by an experienced, creative product designer.
+Judge the result through concrete choices, not claims that a design is premium or beautiful.
+
+- Establish a recognizable visual identity through type, proportion, rhythm, color, and interaction.
+- Build layouts around the actual workout task. Avoid repeating generic dashboard cards on every screen.
+- Use deliberate typography and restrained emphasis; do not make every label bold or every number oversized.
+- Avoid gratuitous gradients, glass effects, glowing accents, decorative badges, and filler illustrations.
+- Let whitespace and alignment establish hierarchy before adding boxes, borders, or shadows.
+- Give each screen an appropriate composition while keeping shared controls and tokens consistent.
+- Make animations explain an action or preserve continuity; omit motion with no useful role.
+- Review realistic content and difficult states, not only a polished empty mockup.
+- Rework anything visually generic or awkward to use, even if it is technically correct.
+- Apply these criteria to every screen and both themes, including dialogs, editors, and error states.
 
 ## Workout interaction
 

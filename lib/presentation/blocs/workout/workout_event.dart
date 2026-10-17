@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import '../../../data/models/plan.dart';
 import '../../../data/models/workout_day.dart';
 import '../../../data/models/set_log.dart';
+import '../../../data/models/exercise.dart';
 
 abstract class WorkoutEvent extends Equatable {
   const WorkoutEvent();
@@ -25,6 +26,57 @@ class FinishWorkout extends WorkoutEvent {}
 class CancelWorkout extends WorkoutEvent {}
 
 class ResumeWorkout extends WorkoutEvent {}
+
+class RetryWorkoutSave extends WorkoutEvent {}
+
+class AdjustSet extends WorkoutEvent {
+  final String exerciseId;
+  final String setId;
+  final double weightDelta;
+  final int repsDelta;
+  const AdjustSet({
+    required this.exerciseId,
+    required this.setId,
+    this.weightDelta = 0,
+    this.repsDelta = 0,
+  });
+  @override
+  List<Object?> get props => [exerciseId, setId, weightDelta, repsDelta];
+}
+
+class SetCompletion extends WorkoutEvent {
+  final String exerciseId;
+  final String setId;
+  final bool completed;
+  const SetCompletion({
+    required this.exerciseId,
+    required this.setId,
+    required this.completed,
+  });
+  @override
+  List<Object?> get props => [exerciseId, setId, completed];
+}
+
+class ChangeWorkoutRest extends WorkoutEvent {
+  final DateTime? restUntil;
+  const ChangeWorkoutRest(this.restUntil);
+  @override
+  List<Object?> get props => [restUntil];
+}
+
+class EditSessionExercise extends WorkoutEvent {
+  final Exercise exercise;
+  const EditSessionExercise(this.exercise);
+  @override
+  List<Object?> get props => [exercise];
+}
+
+class AddSessionExercise extends WorkoutEvent {
+  final Exercise exercise;
+  const AddSessionExercise(this.exercise);
+  @override
+  List<Object?> get props => [exercise];
+}
 
 class AddSet extends WorkoutEvent {
   final String exerciseId;
@@ -52,4 +104,17 @@ class RemoveSet extends WorkoutEvent {
 
   @override
   List<Object?> get props => [exerciseId, setId];
+}
+
+class RestoreSet extends WorkoutEvent {
+  final String exerciseId;
+  final SetLog setLog;
+  final int index;
+  const RestoreSet({
+    required this.exerciseId,
+    required this.setLog,
+    required this.index,
+  });
+  @override
+  List<Object?> get props => [exerciseId, setLog, index];
 }

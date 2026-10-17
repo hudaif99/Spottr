@@ -11,6 +11,7 @@ The main action should be obvious, useful context visible, and repeated typing r
 - Kilograms only; no pounds setting.
 - Flexible plans and sessions: add, replace, reorder, or skip exercises.
 - Optional short exercise notes, such as equipment setup cues, shown quietly with the exercise.
+- Offline suggestions for common exercise names while typing, with custom names always allowed.
 - Offline use and reliable recovery of interrupted workouts.
 - Clear storage boundaries so a backend can be integrated later. No backend integration in this redesign.
 - Android and iOS support with responsive small-phone and iPad layouts.

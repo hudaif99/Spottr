@@ -7,11 +7,13 @@ class PlansBloc extends Bloc<PlansEvent, PlansState> {
   final WorkoutRepository _repository;
 
   PlansBloc(this._repository) : super(PlansInitial()) {
-    on<LoadPlans>(_onLoadPlans);
-    on<AddPlan>(_onAddPlan);
-    on<UpdatePlan>(_onUpdatePlan);
-    on<DeletePlan>(_onDeletePlan);
-    on<SetActivePlan>(_onSetActivePlan);
+    on<PlansEvent>((event, emit) async {
+      if (event is LoadPlans) await _onLoadPlans(event, emit);
+      if (event is AddPlan) await _onAddPlan(event, emit);
+      if (event is UpdatePlan) await _onUpdatePlan(event, emit);
+      if (event is DeletePlan) await _onDeletePlan(event, emit);
+      if (event is SetActivePlan) await _onSetActivePlan(event, emit);
+    }, transformer: (events, mapper) => events.asyncExpand(mapper));
   }
 
   Future<void> _onLoadPlans(LoadPlans event, Emitter<PlansState> emit) async {

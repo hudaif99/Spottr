@@ -1,22 +1,13 @@
 import 'package:flutter/material.dart';
 
 class AppColors {
-  // Brand colors
-  static const Color primaryAccent = Color(0xFFB7FF00); // Electric Lime
-  static const Color secondaryAccent = Color(0xFF00FFA3);
-
-  // Background and surfaces
-  static const Color background = Color(0xFF111111);
-  static const Color surface = Color(0xFF1C1C1E);
-
-  // States
-  static const Color success = Color(0xFF2ECC71);
-  static const Color error = Color(0xFFFF3B3B);
-
-  // Text colors
-  static const Color primaryText = Color(0xFFFFFFFF);
-  static const Color secondaryText = Color(0xFF9A9A9A);
-
-  // Extra colors for specific UI elements
-  static const Color divider = Color(0xFF2C2C2E);
+  static const primaryAccent = Color(0xFFC6D6BA);
+  static const secondaryAccent = Color(0xFFE2AD8D);
+  static const background = Color(0xFF161C19);
+  static const surface = Color(0xFF222A25);
+  static const success = Color(0xFFA9C79A);
+  static const error = Color(0xFFFFB4AB);
+  static const primaryText = Color(0xFFF2F1E9);
+  static const secondaryText = Color(0xFFAFB8AE);
+  static const divider = Color(0xFF384139);
 }

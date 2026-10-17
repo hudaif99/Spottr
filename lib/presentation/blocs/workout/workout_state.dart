@@ -18,6 +18,10 @@ class WorkoutInProgress extends WorkoutState {
   final DateTime startTime;
   final Map<String, List<SetLog>> exerciseLogs;
   final Map<String, List<SetLog>> previousExerciseLogs;
+  final bool isSaving;
+  final String? errorMessage;
+  final DateTime? restUntil;
+  final bool completionPending;
 
   const WorkoutInProgress({
     required this.workoutLogId,
@@ -26,6 +30,10 @@ class WorkoutInProgress extends WorkoutState {
     required this.startTime,
     required this.exerciseLogs,
     this.previousExerciseLogs = const {},
+    this.isSaving = false,
+    this.errorMessage,
+    this.restUntil,
+    this.completionPending = false,
   });
 
   WorkoutInProgress copyWith({
@@ -35,6 +43,11 @@ class WorkoutInProgress extends WorkoutState {
     DateTime? startTime,
     Map<String, List<SetLog>>? exerciseLogs,
     Map<String, List<SetLog>>? previousExerciseLogs,
+    bool? isSaving,
+    String? errorMessage,
+    DateTime? restUntil,
+    bool clearRest = false,
+    bool? completionPending,
   }) {
     return WorkoutInProgress(
       workoutLogId: workoutLogId ?? this.workoutLogId,
@@ -43,6 +56,10 @@ class WorkoutInProgress extends WorkoutState {
       startTime: startTime ?? this.startTime,
       exerciseLogs: exerciseLogs ?? this.exerciseLogs,
       previousExerciseLogs: previousExerciseLogs ?? this.previousExerciseLogs,
+      isSaving: isSaving ?? this.isSaving,
+      errorMessage: errorMessage,
+      restUntil: clearRest ? null : restUntil ?? this.restUntil,
+      completionPending: completionPending ?? this.completionPending,
     );
   }
 
@@ -65,6 +82,10 @@ class WorkoutInProgress extends WorkoutState {
     startTime,
     exerciseLogs,
     previousExerciseLogs,
+    isSaving,
+    errorMessage,
+    restUntil,
+    completionPending,
   ];
 }
 

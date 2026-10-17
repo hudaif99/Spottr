@@ -27,13 +27,16 @@ class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
         (dynamic k, dynamic v) =>
             MapEntry(k as String, (v as List).cast<SetLog>()),
       ),
+      exerciseNames: fields[7] == null
+          ? {}
+          : (fields[7] as Map).cast<String, String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, WorkoutLog obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -47,7 +50,9 @@ class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
       ..writeByte(5)
       ..write(obj.endTime)
       ..writeByte(6)
-      ..write(obj.exerciseLogs);
+      ..write(obj.exerciseLogs)
+      ..writeByte(7)
+      ..write(obj.exerciseNames);
   }
 
   @override

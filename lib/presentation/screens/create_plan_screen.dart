@@ -1,381 +1,298 @@
-import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../core/theme/app_colors_extension.dart';
 import '../../data/models/plan.dart';
 import '../../data/models/workout_day.dart';
 import '../../data/models/exercise.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
+import '../blocs/plans/plans_state.dart';
+import '../widgets/exercise_editor.dart';
 import '../widgets/spottr_button.dart';
 
 class CreatePlanScreen extends StatefulWidget {
   final Plan? plan;
-
   const CreatePlanScreen({super.key, this.plan});
-
   @override
   State<CreatePlanScreen> createState() => _CreatePlanScreenState();
 }
 
 class _CreatePlanScreenState extends State<CreatePlanScreen> {
-  final _nameController = TextEditingController();
-  final List<WorkoutDay> _days = [];
-  final List<TextEditingController> _dayNameControllers = [];
+  final _name = TextEditingController();
+  final _days = <WorkoutDay>[];
+  final _dayNames = <TextEditingController>[];
   final _uuid = const Uuid();
-
+  String? _savingId;
   @override
   void initState() {
     super.initState();
-    if (widget.plan != null) {
-      _nameController.text = widget.plan!.name;
-      _days.addAll(widget.plan!.days);
-      for (var day in _days) {
-        _dayNameControllers.add(TextEditingController(text: day.name));
-      }
-    }
+    _name.text = widget.plan?.name ?? '';
+    _days.addAll(widget.plan?.days ?? []);
+    _dayNames.addAll(_days.map((day) => TextEditingController(text: day.name)));
+    if (_days.isEmpty) _addDay();
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    for (var ctrl in _dayNameControllers) {
-      ctrl.dispose();
+    _name.dispose();
+    for (final controller in _dayNames) {
+      controller.dispose();
     }
     super.dispose();
   }
 
   void _addDay() {
+    final name = 'Day ${_days.length + 1}';
+    _days.add(WorkoutDay(id: _uuid.v4(), name: name));
+    _dayNames.add(TextEditingController(text: name));
+  }
+
+  Future<void> _exercise(int dayIndex, {int? index}) async {
+    final exercise = await showExerciseEditor(
+      context,
+      exercise: index == null ? null : _days[dayIndex].exercises[index],
+    );
+    if (exercise == null || !mounted) return;
     setState(() {
-      final defaultName = 'Day ${_days.length + 1}';
-      _dayNameControllers.add(TextEditingController(text: defaultName));
-      _days.add(WorkoutDay(id: _uuid.v4(), name: defaultName, exercises: []));
+      final exercises = [..._days[dayIndex].exercises];
+      if (index == null) {
+        exercises.add(exercise);
+      } else {
+        exercises[index] = exercise;
+      }
+      _days[dayIndex] = _days[dayIndex].copyWith(exercises: exercises);
     });
   }
 
-  void _addExercise(int dayIndex) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final extNameCtrl = TextEditingController();
-        return AlertDialog(
-          backgroundColor: context.colors.surface,
-          title: Text(
-            'Add Exercise',
-            style: Theme.of(context).textTheme.titleLarge,
+  void _updateExercises(int dayIndex, List<Exercise> exercises) => setState(() {
+    _days[dayIndex] = _days[dayIndex].copyWith(exercises: exercises);
+  });
+  void _save() {
+    if (_name.text.trim().isEmpty ||
+        _days.isEmpty ||
+        _days.any((day) => day.exercises.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Add a plan name and at least one exercise to each day.',
           ),
-          content: TextField(
-            controller: extNameCtrl,
-            style: TextStyle(color: context.colors.primaryText),
-            decoration: InputDecoration(
-              hintText: 'e.g. Bench Press',
-              hintStyle: TextStyle(color: context.colors.secondaryText),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: context.colors.secondaryText),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                if (extNameCtrl.text.isNotEmpty) {
-                  setState(() {
-                    final day = _days[dayIndex];
-                    final updatedExercises = List<Exercise>.from(day.exercises)
-                      ..add(
-                        Exercise(id: _uuid.v4(), name: extNameCtrl.text.trim()),
-                      );
-                    _days[dayIndex] = day.copyWith(exercises: updatedExercises);
-                  });
-                }
-                Navigator.of(ctx).pop();
-              },
-              child: Text(
-                'Add',
-                style: TextStyle(color: context.colors.primaryAccent),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _editExercise(int dayIndex, int exerciseIndex) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        final exercise = _days[dayIndex].exercises[exerciseIndex];
-        final extNameCtrl = TextEditingController(text: exercise.name);
-        return AlertDialog(
-          backgroundColor: context.colors.surface,
-          title: Text(
-            'Edit Exercise',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          content: TextField(
-            controller: extNameCtrl,
-            style: TextStyle(color: context.colors.primaryText),
-            decoration: InputDecoration(
-              hintText: 'e.g. Bench Press',
-              hintStyle: TextStyle(color: context.colors.secondaryText),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(color: context.colors.secondaryText),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                if (extNameCtrl.text.isNotEmpty) {
-                  setState(() {
-                    final day = _days[dayIndex];
-                    final updatedExercises = List<Exercise>.from(day.exercises);
-                    updatedExercises[exerciseIndex] = exercise.copyWith(
-                      name: extNameCtrl.text.trim(),
-                    );
-                    _days[dayIndex] = day.copyWith(exercises: updatedExercises);
-                  });
-                }
-                Navigator.of(ctx).pop();
-              },
-              child: Text(
-                'Save',
-                style: TextStyle(color: context.colors.primaryAccent),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _savePlan() {
-    if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a plan name')));
+        ),
+      );
       return;
     }
-
-    // Update days with their potentially changed names
-    final updatedDays = List<WorkoutDay>.generate(_days.length, (i) {
-      return _days[i].copyWith(
-        name: _dayNameControllers[i].text.trim().isEmpty
-            ? 'Day ${i + 1}'
-            : _dayNameControllers[i].text.trim(),
-      );
-    });
-
-    if (widget.plan != null) {
-      final updatedPlan = widget.plan!.copyWith(
-        name: _nameController.text.trim(),
-        days: updatedDays,
-      );
-      context.read<PlansBloc>().add(UpdatePlan(updatedPlan));
-    } else {
-      final newPlan = Plan(
-        id: _uuid.v4(),
-        name: _nameController.text.trim(),
-        days: updatedDays,
-      );
-      context.read<PlansBloc>().add(AddPlan(newPlan));
-    }
-
-    Navigator.of(context).pop();
+    final days = [
+      for (final (index, day) in _days.indexed)
+        day.copyWith(
+          name: _dayNames[index].text.trim().isEmpty
+              ? 'Day ${index + 1}'
+              : _dayNames[index].text.trim(),
+        ),
+    ];
+    final plan = Plan(
+      id: widget.plan?.id ?? _uuid.v4(),
+      name: _name.text.trim(),
+      days: days,
+      isActive: widget.plan?.isActive ?? false,
+      createdAt: widget.plan?.createdAt,
+    );
+    setState(() => _savingId = plan.id);
+    context.read<PlansBloc>().add(
+      widget.plan == null ? AddPlan(plan) : UpdatePlan(plan),
+    );
   }
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
+  Widget build(BuildContext context) => BlocListener<PlansBloc, PlansState>(
+    listener: (context, state) {
+      if (_savingId == null) return;
+      if (state is PlansLoaded &&
+          state.plans.any((plan) => plan.id == _savingId)) {
+        Navigator.pop(context);
+      }
+      if (state is PlansError) {
+        setState(() => _savingId = null);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save your plan. Please try again.'),
+          ),
+        );
+      }
+    },
+    child: PopScope(
+      canPop: _savingId == null,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.plan != null ? 'Edit Plan' : 'Create Plan'),
-          actions: [
-            TextButton(
-              onPressed: _savePlan,
-              child: Text(
-                'Save',
-                style: TextStyle(color: context.colors.primaryAccent),
-              ),
-            ),
-          ],
+          title: Text(
+            widget.plan == null ? 'Build your plan' : 'Edit your plan',
+          ),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _nameController,
-                style: Theme.of(context).textTheme.headlineMedium,
-                decoration: InputDecoration(
-                  hintText: 'Plan Name (e.g. PPL)',
-                  hintStyle: Theme.of(context).textTheme.headlineMedium
-                      ?.copyWith(
-                        color: context.colors.secondaryText.withValues(
-                          alpha: 0.5,
-                        ),
-                      ),
-                  border: InputBorder.none,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Workout Days',
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              ...List.generate(_days.length, (index) {
-                final day = _days[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: context.colors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: context.colors.divider),
-                  ),
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 720),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: AbsorbPointer(
+                  absorbing: _savingId != null,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _dayNameControllers[index],
-                              style: Theme.of(context).textTheme.titleMedium,
-                              decoration: InputDecoration(
-                                hintText: 'Workout Day Title (e.g. Chest)',
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              Icons.delete_outline,
-                              color: context.colors.error,
-                            ),
-                            style: ButtonStyle(
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            padding: EdgeInsets.all(5),
-                            onPressed: () {
-                              setState(() {
-                                _dayNameControllers[index].dispose();
-                                _dayNameControllers.removeAt(index);
-                                _days.removeAt(index);
-                              });
-                            },
-                          ),
-                        ],
+                      Text(
+                        'A routine that fits you.',
+                        style: Theme.of(context).textTheme.displaySmall,
                       ),
-                      const Divider(height: 10),
-                      // const SizedBox(height: 6),
-                      ...day.exercises.asMap().entries.map((entry) {
-                        final exIndex = entry.key;
-                        final e = entry.value;
-                        return Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4.0),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.fitness_center,
-                                size: 16,
-                                color: context.colors.secondaryText,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  e.name,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.edit,
-                                  size: 18,
-                                  color: context.colors.secondaryText,
-                                ),
-                                onPressed: () => _editExercise(index, exIndex),
-                                constraints: const BoxConstraints(),
-                                padding: const EdgeInsets.all(6),
-                                style: ButtonStyle(
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.delete_outline,
-                                  size: 18,
-                                  color: context.colors.error,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    final updatedExercises =
-                                        List<Exercise>.from(day.exercises)
-                                          ..removeAt(exIndex);
-                                    _days[index] = day.copyWith(
-                                      exercises: updatedExercises,
-                                    );
-                                  });
-                                },
-                                constraints: const BoxConstraints(),
-                                padding: const EdgeInsets.all(6),
-                                style: ButtonStyle(
-                                  tapTargetSize:
-                                      MaterialTapTargetSize.shrinkWrap,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                      const SizedBox(height: 8),
-                      TextButton.icon(
-                        onPressed: () => _addExercise(index),
-                        icon: Icon(
-                          Icons.add,
-                          size: 16,
-                          color: context.colors.primaryAccent,
-                        ),
-                        label: Text(
-                          'Add Exercise',
-                          style: TextStyle(color: context.colors.primaryAccent),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Arrange your days. Keep useful setup cues with each exercise.',
+                      ),
+                      const SizedBox(height: 28),
+                      TextField(
+                        controller: _name,
+                        maxLength: 80,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Plan name',
+                          hintText: 'Your weekly routine',
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      for (final (dayIndex, day) in _days.indexed)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: context.colors.surface,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: context.colors.divider),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _dayNames[dayIndex],
+                                        maxLength: 80,
+                                        decoration: const InputDecoration(
+                                          labelText: 'Workout day',
+                                        ),
+                                      ),
+                                    ),
+                                    PopupMenuButton<String>(
+                                      tooltip: 'Day options',
+                                      onSelected: (_) {
+                                        setState(() {
+                                          _days.removeAt(dayIndex);
+                                          _dayNames
+                                              .removeAt(dayIndex)
+                                              .dispose();
+                                        });
+                                      },
+                                      itemBuilder: (_) => [
+                                        const PopupMenuItem(
+                                          value: 'remove',
+                                          child: Text('Remove day'),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                for (final (index, exercise)
+                                    in day.exercises.indexed)
+                                  Material(
+                                    color: context.colors.surface,
+                                    child: ListTile(
+                                      contentPadding: EdgeInsets.zero,
+                                      title: Text(exercise.name),
+                                      subtitle: Text(
+                                        '${exercise.targetSets} sets · ${exercise.targetReps} reps${exercise.note.isEmpty ? '' : '\n${exercise.note}'}',
+                                      ),
+                                      onTap: () =>
+                                          _exercise(dayIndex, index: index),
+                                      trailing: PopupMenuButton<String>(
+                                        tooltip: '${exercise.name} options',
+                                        onSelected: (value) {
+                                          if (value == 'edit') {
+                                            _exercise(dayIndex, index: index);
+                                            return;
+                                          }
+                                          final exercises = [...day.exercises];
+                                          if (value == 'up' && index > 0) {
+                                            exercises.removeAt(index);
+                                            exercises.insert(
+                                              index - 1,
+                                              exercise,
+                                            );
+                                          }
+                                          if (value == 'down' &&
+                                              index < exercises.length - 1) {
+                                            exercises.removeAt(index);
+                                            exercises.insert(
+                                              index + 1,
+                                              exercise,
+                                            );
+                                          }
+                                          if (value == 'remove') {
+                                            exercises.removeAt(index);
+                                          }
+                                          _updateExercises(dayIndex, exercises);
+                                        },
+                                        itemBuilder: (_) => [
+                                          const PopupMenuItem(
+                                            value: 'edit',
+                                            child: Text('Edit details'),
+                                          ),
+                                          if (index > 0)
+                                            const PopupMenuItem(
+                                              value: 'up',
+                                              child: Text('Move up'),
+                                            ),
+                                          if (index < day.exercises.length - 1)
+                                            const PopupMenuItem(
+                                              value: 'down',
+                                              child: Text('Move down'),
+                                            ),
+                                          const PopupMenuItem(
+                                            value: 'remove',
+                                            child: Text('Remove exercise'),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                TextButton.icon(
+                                  onPressed: () => _exercise(dayIndex),
+                                  icon: const Icon(Icons.add),
+                                  label: const Text('Add exercise'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      SpottrButton(
+                        text: 'Add workout day',
+                        variant: SpottrButtonVariant.outline,
+                        onPressed: () => setState(_addDay),
+                      ),
+                      const SizedBox(height: 24),
+                      SpottrButton(
+                        text: 'Save plan',
+                        isLoading: _savingId != null,
+                        onPressed: _save,
+                      ),
+                      const SizedBox(height: 24),
                     ],
                   ),
-                );
-              }),
-              const SizedBox(height: 16),
-              SpottrButton(
-                text: 'Add Workout Day',
-                variant: SpottrButtonVariant.outline,
-                icon: Icon(
-                  Icons.add_circle_outline,
-                  color: context.colors.primaryText,
                 ),
-                onPressed: _addDay,
               ),
-              const SizedBox(height: 40),
-            ],
+            ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

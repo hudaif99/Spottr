@@ -23,10 +23,4 @@ class ResumeTimer extends TimerEvent {}
 
 class ResetTimer extends TimerEvent {}
 
-class TickTimer extends TimerEvent {
-  final int elapsedSeconds;
-  const TickTimer(this.elapsedSeconds);
-
-  @override
-  List<Object?> get props => [elapsedSeconds];
-}
+class RefreshTimer extends TimerEvent {}

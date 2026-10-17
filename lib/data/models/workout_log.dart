@@ -27,6 +27,9 @@ class WorkoutLog extends HiveObject {
   @HiveField(6)
   final Map<String, List<SetLog>> exerciseLogs;
 
+  @HiveField(7, defaultValue: {})
+  final Map<String, String> exerciseNames;
+
   WorkoutLog({
     required this.id,
     required this.planId,
@@ -35,6 +38,7 @@ class WorkoutLog extends HiveObject {
     required this.startTime,
     this.endTime,
     this.exerciseLogs = const {},
+    this.exerciseNames = const {},
   });
 
   int get totalDurationInSeconds {
@@ -62,6 +66,7 @@ class WorkoutLog extends HiveObject {
     DateTime? startTime,
     DateTime? endTime,
     Map<String, List<SetLog>>? exerciseLogs,
+    Map<String, String>? exerciseNames,
   }) {
     return WorkoutLog(
       id: id ?? this.id,
@@ -71,6 +76,7 @@ class WorkoutLog extends HiveObject {
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       exerciseLogs: exerciseLogs ?? this.exerciseLogs,
+      exerciseNames: exerciseNames ?? this.exerciseNames,
     );
   }
 }

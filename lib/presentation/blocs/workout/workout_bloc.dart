@@ -1,8 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
+import '../../../data/models/active_workout.dart';
+import '../../../data/models/exercise.dart';
 import '../../../data/models/set_log.dart';
 import '../../../data/models/workout_log.dart';
-import '../../../data/models/active_workout.dart';
 import '../../../domain/repositories/workout_repository.dart';
 import '../../../notifications/workout_reminder_scheduler.dart';
 import 'workout_event.dart';
@@ -10,304 +11,379 @@ import 'workout_state.dart';
 
 class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
   final WorkoutRepository _repository;
-  final WorkoutReminderScheduler _scheduler;
+  final WorkoutReminderScheduler? _scheduler;
+  final DateTime Function() _now;
   final _uuid = const Uuid();
 
-  WorkoutBloc(this._repository, this._scheduler) : super(WorkoutInitial()) {
-    on<StartWorkout>(_onStartWorkout);
-    on<AddSet>(_onAddSet);
-    on<UpdateSet>(_onUpdateSet);
-    on<RemoveSet>(_onRemoveSet);
-    on<FinishWorkout>(_onFinishWorkout);
-    on<CancelWorkout>(_onCancelWorkout);
-    on<ResumeWorkout>(_onResumeWorkout);
-  }
-
-  Future<void> _saveProgress(WorkoutInProgress state) async {
-    final activeWorkout = ActiveWorkout(
-      workoutLogId: state.workoutLogId,
-      planId: state.planId,
-      day: state.day,
-      startTime: state.startTime,
-      exerciseLogs: state.exerciseLogs,
-      previousExerciseLogs: state.previousExerciseLogs,
+  WorkoutBloc(this._repository, [this._scheduler, DateTime Function()? now])
+    : _now = now ?? DateTime.now,
+      super(WorkoutInitial()) {
+    // One queue keeps edits, finish, and cancel in their original order.
+    on<WorkoutEvent>(
+      _handle,
+      transformer: (events, mapper) => events.asyncExpand(mapper),
     );
-    await _repository.saveActiveWorkout(activeWorkout);
   }
 
-  void _onResumeWorkout(ResumeWorkout event, Emitter<WorkoutState> emit) {
-    final activeWorkout = _repository.getActiveWorkout();
-    if (activeWorkout != null) {
+  Future<void> _save(
+    WorkoutInProgress session,
+    Emitter<WorkoutState> emit,
+  ) async {
+    emit(session.copyWith(isSaving: true));
+    try {
+      await _repository.saveActiveWorkout(
+        ActiveWorkout(
+          workoutLogId: session.workoutLogId,
+          planId: session.planId,
+          day: session.day,
+          startTime: session.startTime,
+          exerciseLogs: session.exerciseLogs,
+          previousExerciseLogs: session.previousExerciseLogs,
+          restUntil: session.restUntil,
+        ),
+      );
+      emit(session.copyWith(isSaving: false));
+    } catch (_) {
       emit(
-        WorkoutInProgress(
-          workoutLogId: activeWorkout.workoutLogId,
-          planId: activeWorkout.planId,
-          day: activeWorkout.day,
-          startTime: activeWorkout.startTime,
-          exerciseLogs: Map<String, List<SetLog>>.from(
-            activeWorkout.exerciseLogs,
-          ),
-          previousExerciseLogs: Map<String, List<SetLog>>.from(
-            activeWorkout.previousExerciseLogs,
-          ),
+        session.copyWith(
+          isSaving: false,
+          errorMessage: 'Changes are still here. Retry saving before leaving.',
         ),
       );
     }
   }
 
-  Future<void> _onStartWorkout(
-    StartWorkout event,
+  List<SetLog> _suggestedSets(Exercise exercise, List<SetLog> previous) =>
+      List.generate(exercise.targetSets, (index) {
+        final suggestion = previous.isEmpty
+            ? null
+            : previous[index < previous.length ? index : previous.length - 1];
+        return SetLog(
+          id: _uuid.v4(),
+          reps: suggestion?.reps ?? exercise.targetReps,
+          weight: suggestion?.weight ?? exercise.targetWeight ?? 0,
+        );
+      });
+
+  Future<void> _handle(
+    WorkoutEvent incoming,
     Emitter<WorkoutState> emit,
   ) async {
-    final Map<String, List<SetLog>> initialLogs = {};
-    for (var exercise in event.day.exercises) {
-      initialLogs[exercise.id] = [];
+    final event = _resolveSetChange(incoming);
+    if (event is ResumeWorkout) {
+      final cached = _repository.getActiveWorkout();
+      if (cached == null) return;
+      bool completionPending = false;
+      try {
+        final logs = await _repository.getWorkoutLogs();
+        if (logs.any((log) => log.id == cached.workoutLogId)) {
+          completionPending = true;
+          await _repository.clearActiveWorkout();
+          emit(WorkoutInitial());
+          return;
+        }
+        emit(
+          WorkoutInProgress(
+            workoutLogId: cached.workoutLogId,
+            planId: cached.planId,
+            day: cached.day.copyWith(
+              exercises: cached.day.exercises.map(_resolveRest).toList(),
+            ),
+            startTime: cached.startTime,
+            exerciseLogs: cached.exerciseLogs,
+            previousExerciseLogs: cached.previousExerciseLogs,
+            restUntil: cached.restUntil,
+          ),
+        );
+      } catch (_) {
+        emit(
+          WorkoutInProgress(
+            workoutLogId: cached.workoutLogId,
+            planId: cached.planId,
+            day: cached.day.copyWith(
+              exercises: cached.day.exercises.map(_resolveRest).toList(),
+            ),
+            startTime: cached.startTime,
+            exerciseLogs: cached.exerciseLogs,
+            previousExerciseLogs: cached.previousExerciseLogs,
+            restUntil: cached.restUntil,
+            errorMessage: completionPending
+                ? 'Workout saved. Retry finishing to close this session.'
+                : 'Could not check saved history. Retry before finishing.',
+            completionPending: completionPending,
+          ),
+        );
+      }
+      return;
     }
+    if (event is StartWorkout) {
+      if (state is WorkoutInProgress) return;
+      try {
+        final history = await _repository.getWorkoutLogs();
+        history.sort((a, b) => b.startTime.compareTo(a.startTime));
+        final previous = <String, List<SetLog>>{};
+        for (final exercise in event.day.exercises) {
+          for (final log in history) {
+            final sets = (log.exerciseLogs[exercise.id] ?? [])
+                .where((set) => set.isCompleted)
+                .toList();
+            if (sets.isNotEmpty) {
+              previous[exercise.id] = sets;
+              break;
+            }
+          }
+        }
+        await _save(
+          WorkoutInProgress(
+            workoutLogId: _uuid.v4(),
+            planId: event.plan.id,
+            day: event.day.copyWith(
+              exercises: event.day.exercises.map(_resolveRest).toList(),
+            ),
+            startTime: _now(),
+            previousExerciseLogs: previous,
+            exerciseLogs: {
+              for (final exercise in event.day.exercises)
+                exercise.id: _suggestedSets(
+                  exercise,
+                  previous[exercise.id] ?? [],
+                ),
+            },
+          ),
+          emit,
+        );
+        await _updateReminders();
+      } catch (_) {
+        emit(
+          const WorkoutError('Could not start the workout. Please try again.'),
+        );
+      }
+      return;
+    }
+    final current = state;
+    if (current is! WorkoutInProgress) return;
+    if (event is FinishWorkout ||
+        event is CancelWorkout ||
+        event is RetryWorkoutSave && current.completionPending) {
+      emit(current.copyWith(isSaving: true));
+      bool saved = current.completionPending;
+      try {
+        final hasCompleted = current.exerciseLogs.values.any(
+          (sets) => sets.any((set) => set.isCompleted),
+        );
+        if (event is FinishWorkout && hasCompleted && !saved) {
+          await _repository.saveWorkoutLog(
+            WorkoutLog(
+              id: current.workoutLogId,
+              planId: current.planId,
+              dayId: current.day.id,
+              dayName: current.day.name,
+              startTime: current.startTime,
+              endTime: _now(),
+              exerciseLogs: current.exerciseLogs,
+              exerciseNames: {
+                for (final exercise in current.day.exercises)
+                  exercise.id: exercise.name,
+              },
+            ),
+          );
+          saved = true;
+        }
+        await _repository.clearActiveWorkout();
+        emit(event is FinishWorkout ? WorkoutCompleted() : WorkoutInitial());
+        emit(WorkoutInitial());
+        if (saved) {
+          await _updateReminders();
+          await _notifyAchievements(current.workoutLogId);
+        }
+      } catch (_) {
+        emit(
+          current.copyWith(
+            isSaving: false,
+            errorMessage: saved
+                ? 'Workout saved. Retry finishing to close this session.'
+                : 'Could not save this workout. Your session is still here; try again.',
+            completionPending: saved,
+          ),
+        );
+      }
+      return;
+    }
+    if (current.completionPending) return;
+    if (event is RetryWorkoutSave) {
+      await _save(current, emit);
+      return;
+    }
+    if (event is ChangeWorkoutRest) {
+      await _save(
+        current.copyWith(
+          restUntil: event.restUntil,
+          clearRest: event.restUntil == null,
+        ),
+        emit,
+      );
+      return;
+    }
+    if (event is EditSessionExercise) {
+      final exercises = current.day.exercises
+          .map(
+            (exercise) => exercise.id == event.exercise.id
+                ? _resolveRest(event.exercise)
+                : exercise,
+          )
+          .toList();
+      await _save(
+        current.copyWith(day: current.day.copyWith(exercises: exercises)),
+        emit,
+      );
+      return;
+    }
+    if (event is AddSessionExercise) {
+      await _save(
+        current.copyWith(
+          day: current.day.copyWith(
+            exercises: [...current.day.exercises, _resolveRest(event.exercise)],
+          ),
+          exerciseLogs: {
+            ...current.exerciseLogs,
+            event.exercise.id: _suggestedSets(event.exercise, []),
+          },
+        ),
+        emit,
+      );
+      return;
+    }
+    final logs = {...current.exerciseLogs};
+    String? exerciseId;
+    if (event is AddSet) exerciseId = event.exerciseId;
+    if (event is UpdateSet) exerciseId = event.exerciseId;
+    if (event is RemoveSet) exerciseId = event.exerciseId;
+    if (event is RestoreSet) exerciseId = event.exerciseId;
+    if (exerciseId == null) return;
+    final sets = [...logs[exerciseId] ?? <SetLog>[]];
+    DateTime? restUntil;
+    if (event is AddSet) {
+      final exercise = current.day.exercises.firstWhere(
+        (exercise) => exercise.id == exerciseId,
+      );
+      sets.add(
+        SetLog(
+          id: _uuid.v4(),
+          weight: sets.lastOrNull?.weight ?? exercise.targetWeight ?? 0,
+          reps: sets.lastOrNull?.reps ?? exercise.targetReps,
+        ),
+      );
+    } else if (event is UpdateSet) {
+      final index = sets.indexWhere((set) => set.id == event.setLog.id);
+      if (index < 0) return;
+      if (event.setLog.reps < 0 ||
+          event.setLog.weight < 0 ||
+          !event.setLog.weight.isFinite) {
+        return;
+      }
+      if (event.setLog.isCompleted && event.setLog.reps == 0) return;
+      if (event.setLog.isCompleted && !sets[index].isCompleted) {
+        final exercise = current.day.exercises.firstWhere(
+          (exercise) => exercise.id == exerciseId,
+        );
+        restUntil = _now().add(Duration(seconds: exercise.restDurationSeconds));
+      }
+      sets[index] = event.setLog;
+    } else if (event is RemoveSet) {
+      sets.removeWhere((set) => set.id == event.setId);
+    } else if (event is RestoreSet) {
+      if (sets.any((set) => set.id == event.setLog.id)) return;
+      sets.insert(event.index.clamp(0, sets.length), event.setLog);
+    }
+    logs[exerciseId] = sets;
+    await _save(
+      current.copyWith(exerciseLogs: logs, restUntil: restUntil),
+      emit,
+    );
+  }
 
-    final Map<String, List<SetLog>> previousExerciseLogs = {};
+  WorkoutEvent _resolveSetChange(WorkoutEvent event) {
+    final current = state;
+    if (current is! WorkoutInProgress) return event;
+    if (event is AdjustSet) {
+      final set = (current.exerciseLogs[event.exerciseId] ?? [])
+          .where((set) => set.id == event.setId)
+          .firstOrNull;
+      if (set == null || !event.weightDelta.isFinite) return event;
+      return UpdateSet(
+        exerciseId: event.exerciseId,
+        setLog: set.copyWith(
+          weight: (set.weight + event.weightDelta).clamp(0, 2000).toDouble(),
+          reps: (set.reps + event.repsDelta).clamp(0, 2000),
+        ),
+      );
+    }
+    if (event is SetCompletion) {
+      final set = (current.exerciseLogs[event.exerciseId] ?? [])
+          .where((set) => set.id == event.setId)
+          .firstOrNull;
+      if (set == null) return event;
+      return UpdateSet(
+        exerciseId: event.exerciseId,
+        setLog: set.copyWith(isCompleted: event.completed),
+      );
+    }
+    return event;
+  }
+
+  Future<void> _updateReminders() async {
+    final scheduler = _scheduler;
+    if (scheduler == null) return;
     try {
-      final allLogs = await _repository.getWorkoutLogs();
-      // Sort by date descending
-      allLogs.sort((a, b) => b.startTime.compareTo(a.startTime));
+      final schedule = await _repository.getScheduleForToday();
+      if (schedule != null) {
+        await scheduler.cancelAndRescheduleTodaysMissedWorkout(schedule);
+      }
+    } catch (_) {
+      /* Reminders must not block logging. */
+    }
+  }
 
-      for (var exercise in event.day.exercises) {
-        for (var log in allLogs) {
-          if (log.exerciseLogs.containsKey(exercise.id) &&
-              log.exerciseLogs[exercise.id]!.isNotEmpty) {
-            previousExerciseLogs[exercise.id] = log.exerciseLogs[exercise.id]!;
-            break; // Found the most recent logs for this exercise
+  Exercise _resolveRest(Exercise exercise) => exercise.useDefaultRest
+      ? exercise.copyWith(
+          restDurationSeconds: _repository.getDefaultRestTime(),
+          useDefaultRest: false,
+        )
+      : exercise;
+
+  Future<void> _notifyAchievements(String sessionId) async {
+    final scheduler = _scheduler;
+    if (scheduler == null) return;
+    try {
+      final history = await _repository.getWorkoutLogs();
+      if ([1, 10, 25, 50, 100, 365].contains(history.length)) {
+        await scheduler.showMilestoneNotification(history.length);
+        return;
+      }
+      final session = history.where((log) => log.id == sessionId).firstOrNull;
+      if (session == null) return;
+      for (final entry in session.exerciseLogs.entries) {
+        final previous = history
+            .where((log) => log.id != sessionId)
+            .expand((log) => log.exerciseLogs[entry.key] ?? <SetLog>[])
+            .where((set) => set.isCompleted)
+            .toList();
+        if (previous.isEmpty) continue;
+        for (final set in entry.value.where((set) => set.isCompleted)) {
+          if (previous.every(
+            (old) =>
+                set.weight > old.weight ||
+                set.weight == old.weight && set.reps > old.reps,
+          )) {
+            await scheduler.showPersonalRecordNotification(
+              '${set.weight} kg × ${set.reps} reps — new best!',
+            );
+            return;
           }
         }
       }
     } catch (_) {
-      // Ignore errors fetching previous logs
+      /* Achievements must not block saving. */
     }
-
-    final newState = WorkoutInProgress(
-      workoutLogId: 'log_${_uuid.v4()}',
-      planId: event.plan.id,
-      day: event.day,
-      startTime: DateTime.now(),
-      exerciseLogs: initialLogs,
-      previousExerciseLogs: previousExerciseLogs,
-    );
-
-    await _saveProgress(newState);
-    emit(newState);
-
-    // Cancel today's missed-workout reminder — the user has started training.
-    // It will be rescheduled for next week automatically.
-    try {
-      final schedule = await _repository.getScheduleForToday();
-      if (schedule != null) {
-        await _scheduler.cancelAndRescheduleTodaysMissedWorkout(schedule);
-      }
-    } catch (_) { /* non-critical */ }
-  }
-
-  void _onAddSet(AddSet event, Emitter<WorkoutState> emit) {
-    if (state is WorkoutInProgress) {
-      final currentState = state as WorkoutInProgress;
-      final currentLogs = Map<String, List<SetLog>>.from(
-        currentState.exerciseLogs,
-      );
-
-      final exerciseSets = List<SetLog>.from(
-        currentLogs[event.exerciseId] ?? [],
-      );
-
-      // Auto-fill values based on the previous set if it exists
-      double weight = 0.0;
-      int reps = 0;
-      if (exerciseSets.isNotEmpty) {
-        weight = exerciseSets.last.weight;
-        reps = exerciseSets.last.reps;
-      }
-
-      exerciseSets.add(
-        SetLog(id: 'set_${_uuid.v4()}', weight: weight, reps: reps),
-      );
-
-      currentLogs[event.exerciseId] = exerciseSets;
-
-      final newState = currentState.copyWith(exerciseLogs: currentLogs);
-      _saveProgress(newState);
-      emit(newState);
-    }
-  }
-
-  void _onUpdateSet(UpdateSet event, Emitter<WorkoutState> emit) {
-    if (state is WorkoutInProgress) {
-      final currentState = state as WorkoutInProgress;
-      final currentLogs = Map<String, List<SetLog>>.from(
-        currentState.exerciseLogs,
-      );
-
-      final exerciseSets = List<SetLog>.from(
-        currentLogs[event.exerciseId] ?? [],
-      );
-
-      final setIndex = exerciseSets.indexWhere((s) => s.id == event.setLog.id);
-      if (setIndex != -1) {
-        exerciseSets[setIndex] = event.setLog;
-        currentLogs[event.exerciseId] = exerciseSets;
-        final newState = currentState.copyWith(exerciseLogs: currentLogs);
-        _saveProgress(newState);
-        emit(newState);
-      }
-    }
-  }
-
-  void _onRemoveSet(RemoveSet event, Emitter<WorkoutState> emit) {
-    if (state is WorkoutInProgress) {
-      final currentState = state as WorkoutInProgress;
-      final currentLogs = Map<String, List<SetLog>>.from(
-        currentState.exerciseLogs,
-      );
-
-      final exerciseSets = List<SetLog>.from(
-        currentLogs[event.exerciseId] ?? [],
-      );
-
-      exerciseSets.removeWhere((s) => s.id == event.setId);
-      currentLogs[event.exerciseId] = exerciseSets;
-
-      final newState = currentState.copyWith(exerciseLogs: currentLogs);
-      _saveProgress(newState);
-      emit(newState);
-    }
-  }
-
-  Future<void> _onFinishWorkout(
-    FinishWorkout event,
-    Emitter<WorkoutState> emit,
-  ) async {
-    if (state is WorkoutInProgress) {
-      final currentState = state as WorkoutInProgress;
-
-      bool hasCompletedSets = false;
-      for (var logs in currentState.exerciseLogs.values) {
-        if (logs.any((set) => set.isCompleted)) {
-          hasCompletedSets = true;
-          break;
-        }
-      }
-
-      if (!hasCompletedSets) {
-        // Discard the workout if nothing was completed
-        emit(WorkoutInitial());
-        return;
-      }
-
-      final workoutLog = WorkoutLog(
-        id: currentState.workoutLogId,
-        planId: currentState.planId,
-        dayId: currentState.day.id,
-        dayName: currentState.day.name,
-        startTime: currentState.startTime,
-        endTime: DateTime.now(),
-        exerciseLogs: currentState.exerciseLogs,
-      );
-
-      try {
-        await _repository.saveWorkoutLog(workoutLog);
-        await _repository.clearActiveWorkout();
-
-        // —— Post-workout notification hooks ——
-        await _handlePostWorkoutNotifications(currentState, workoutLog);
-
-        emit(WorkoutCompleted());
-        // Reset state after completion so we can start another one later
-        emit(WorkoutInitial());
-      } catch (e) {
-        emit(WorkoutError('Failed to save workout: $e'));
-      }
-    }
-  }
-
-  // ─────────────────────────── Post-workout notification logic
-
-  Future<void> _handlePostWorkoutNotifications(
-    WorkoutInProgress currentState,
-    WorkoutLog savedLog,
-  ) async {
-    try {
-      final schedule = await _repository.getScheduleForToday();
-
-      // Cancel today’s missed-workout and streak reminders.
-      if (schedule != null) {
-        await _scheduler.cancelAndRescheduleTodaysMissedWorkout(schedule);
-      }
-      await _scheduler.cancelStreakReminder();
-
-      // ── Milestone detection ─────────────────────────────────
-      final allLogs = await _repository.getWorkoutLogs();
-      const milestones = [1, 10, 25, 50, 100, 365];
-      if (milestones.contains(allLogs.length)) {
-        await _scheduler.showMilestoneNotification(allLogs.length);
-        return; // Milestone takes priority over PR
-      }
-
-      // ── Personal Record detection ────────────────────────────
-      // Build historical best per exercise (weight, reps).
-      final historicalBests = <String, ({double weight, int reps})>{};
-      for (final log in allLogs) {
-        if (log.id == savedLog.id) continue; // exclude current session
-        for (final entry in log.exerciseLogs.entries) {
-          for (final set in entry.value) {
-            if (!set.isCompleted) continue;
-            final prev = historicalBests[entry.key];
-            if (prev == null ||
-                set.weight > prev.weight ||
-                (set.weight == prev.weight && set.reps > prev.reps)) {
-              historicalBests[entry.key] = (weight: set.weight, reps: set.reps);
-            }
-          }
-        }
-      }
-
-      // Check current session for new records.
-      bool hasNewPR = false;
-      String prDetail = '';
-
-      for (final entry in savedLog.exerciseLogs.entries) {
-        for (final set in entry.value) {
-          if (!set.isCompleted) continue;
-          final prev = historicalBests[entry.key];
-          if (prev == null || set.weight > prev.weight ||
-              (set.weight == prev.weight && set.reps > prev.reps)) {
-            hasNewPR = true;
-            prDetail = '${set.weight}kg × ${set.reps} reps — new best!';
-            break;
-          }
-        }
-        if (hasNewPR) break;
-      }
-
-      // Check session duration record.
-      if (!hasNewPR) {
-        final currentDuration = savedLog.totalDurationInSeconds;
-        final maxPrevDuration = allLogs
-            .where((l) => l.id != savedLog.id)
-            .fold<int>(0, (m, l) => l.totalDurationInSeconds > m ? l.totalDurationInSeconds : m);
-        if (currentDuration > maxPrevDuration && maxPrevDuration > 0) {
-          hasNewPR = true;
-          final mins = currentDuration ~/ 60;
-          prDetail = 'Longest workout yet: ${mins}m!';
-        }
-      }
-
-      if (hasNewPR) {
-        await _scheduler.showPersonalRecordNotification(prDetail);
-      }
-    } catch (_) { /* non-critical — never block workout save */ }
-  }
-
-  Future<void> _onCancelWorkout(
-    CancelWorkout event,
-    Emitter<WorkoutState> emit,
-  ) async {
-    await _repository.clearActiveWorkout();
-    emit(WorkoutInitial());
   }
 }

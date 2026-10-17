@@ -26,6 +26,7 @@ abstract class WorkoutRepository {
   ActiveWorkout? getActiveWorkout();
   Future<void> saveActiveWorkout(ActiveWorkout workout);
   Future<void> clearActiveWorkout();
+  int getDefaultRestTime();
 
   // Schedule (read-only access for notification hooks)
   Future<WorkoutSchedule?> getScheduleForToday();

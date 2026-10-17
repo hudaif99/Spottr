@@ -8,19 +8,19 @@ class SetLog extends HiveObject {
   final String id;
 
   @HiveField(1)
-  int reps;
+  final int reps;
 
   @HiveField(2)
-  double weight;
+  final double weight;
 
   @HiveField(3)
-  bool isCompleted;
+  final bool isCompleted;
 
   @HiveField(4)
-  bool isWarmup;
+  final bool isWarmup;
 
   @HiveField(5)
-  bool isDropSet;
+  final bool isDropSet;
 
   SetLog({
     required this.id,

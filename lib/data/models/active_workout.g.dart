@@ -29,13 +29,14 @@ class ActiveWorkoutAdapter extends TypeAdapter<ActiveWorkout> {
         (dynamic k, dynamic v) =>
             MapEntry(k as String, (v as List).cast<SetLog>()),
       ),
+      restUntil: fields[6] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ActiveWorkout obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.workoutLogId)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class ActiveWorkoutAdapter extends TypeAdapter<ActiveWorkout> {
       ..writeByte(4)
       ..write(obj.exerciseLogs)
       ..writeByte(5)
-      ..write(obj.previousExerciseLogs);
+      ..write(obj.previousExerciseLogs)
+      ..writeByte(6)
+      ..write(obj.restUntil);
   }
 
   @override

@@ -7,52 +7,68 @@ import 'timer_event.dart';
 import 'timer_state.dart';
 
 class TimerBloc extends Bloc<TimerEvent, TimerState> {
-  final LocalDatabaseService _localDbService;
-  StreamSubscription<int>? _tickerSubscription;
-  final AudioPlayer _audioPlayer = AudioPlayer();
+  final LocalDatabaseService _settings;
+  final DateTime Function() _now;
+  Timer? _ticker;
+  AudioPlayer? _audio;
+  DateTime? _deadline;
+  DateTime? _started;
+  bool _played = false;
 
-  TimerBloc(this._localDbService) : super(const TimerInitial()) {
-    on<StartRestTimer>(_onStartRestTimer);
-    on<StartStopwatch>(_onStartStopwatch);
-    on<PauseTimer>(_onPauseTimer);
-    on<ResumeTimer>(_onResumeTimer);
-    on<ResetTimer>(_onResetTimer);
-    on<TickTimer>(_onTickTimer);
-  }
-
-  void _onStartRestTimer(StartRestTimer event, Emitter<TimerState> emit) {
-    emit(
-      TimerRunInProgress(
-        mode: TimerMode.countdown,
-        currentSeconds: event.durationSeconds,
-        totalDurationSeconds: event.durationSeconds,
-      ),
+  TimerBloc(this._settings, {DateTime Function()? now})
+    : _now = now ?? DateTime.now,
+      super(const TimerInitial()) {
+    on<TimerEvent>(
+      _handle,
+      transformer: (events, mapper) => events.asyncExpand(mapper),
     );
-    _tickerSubscription?.cancel();
-    _tickerSubscription = Stream.periodic(const Duration(seconds: 1), (x) => 1)
-        .listen((_) {
-          if (state.isRunning && state.mode == TimerMode.countdown) {
-            add(TickTimer(state.currentSeconds - 1));
-          }
-        });
   }
-
-  void _onStartStopwatch(StartStopwatch event, Emitter<TimerState> emit) {
-    emit(
-      const TimerRunInProgress(mode: TimerMode.stopwatch, currentSeconds: 0),
+  void _startTicks() {
+    _ticker?.cancel();
+    _ticker = Timer.periodic(
+      const Duration(milliseconds: 250),
+      (_) => add(RefreshTimer()),
     );
-    _tickerSubscription?.cancel();
-    _tickerSubscription = Stream.periodic(const Duration(seconds: 1), (x) => 1)
-        .listen((_) {
-          if (state.isRunning && state.mode == TimerMode.stopwatch) {
-            add(TickTimer(state.currentSeconds + 1));
-          }
-        });
   }
 
-  void _onPauseTimer(PauseTimer event, Emitter<TimerState> emit) {
-    if (state is TimerRunInProgress) {
-      _tickerSubscription?.pause();
+  Future<void> _stopSound() async {
+    try {
+      await _audio?.stop();
+    } catch (_) {
+      /* Sound is optional. */
+    }
+  }
+
+  Future<void> _playSound() async {
+    try {
+      _audio ??= AudioPlayer();
+      await _audio!.play(AssetSource('sounds/timer_done.mp3'));
+    } catch (_) {
+      /* Sound is optional. */
+    }
+  }
+
+  void _handle(TimerEvent event, Emitter<TimerState> emit) {
+    if (event is StartRestTimer) {
+      _stopSound();
+      _played = false;
+      _deadline = _now().add(Duration(seconds: event.durationSeconds));
+      emit(
+        TimerRunInProgress(
+          mode: TimerMode.countdown,
+          currentSeconds: event.durationSeconds,
+          totalDurationSeconds: event.durationSeconds,
+        ),
+      );
+      _startTicks();
+    } else if (event is StartStopwatch) {
+      _started = _now();
+      emit(
+        const TimerRunInProgress(mode: TimerMode.stopwatch, currentSeconds: 0),
+      );
+      _startTicks();
+    } else if (event is PauseTimer && state.isRunning) {
+      _ticker?.cancel();
       emit(
         TimerRunPause(
           mode: state.mode,
@@ -60,12 +76,9 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
           totalDurationSeconds: state.totalDurationSeconds,
         ),
       );
-    }
-  }
-
-  void _onResumeTimer(ResumeTimer event, Emitter<TimerState> emit) {
-    if (state is TimerRunPause) {
-      _tickerSubscription?.resume();
+    } else if (event is ResumeTimer && state is TimerRunPause) {
+      _deadline = _now().add(Duration(seconds: state.currentSeconds));
+      _started = _now().subtract(Duration(seconds: state.currentSeconds));
       emit(
         TimerRunInProgress(
           mode: state.mode,
@@ -73,58 +86,57 @@ class TimerBloc extends Bloc<TimerEvent, TimerState> {
           totalDurationSeconds: state.totalDurationSeconds,
         ),
       );
-    }
-  }
-
-  void _onResetTimer(ResetTimer event, Emitter<TimerState> emit) {
-    _tickerSubscription?.cancel();
-    emit(const TimerInitial());
-  }
-
-  void _onTickTimer(TickTimer event, Emitter<TimerState> emit) {
-    if (state.mode == TimerMode.countdown) {
-      if (event.elapsedSeconds > 0) {
-        if (event.elapsedSeconds == 3 && _localDbService.getPlayTimerSound()) {
-          // Play the 3-beep sound when 3 seconds remain, to sync with the countdown
-          _audioPlayer.setVolume(1.0).then((_) {
-            _audioPlayer
-                .play(AssetSource('sounds/timer_done.mp3'))
-                .catchError((_) {});
-          });
+      _startTicks();
+    } else if (event is ResetTimer) {
+      _ticker?.cancel();
+      _deadline = null;
+      _started = null;
+      _stopSound();
+      emit(const TimerInitial());
+    } else if (event is RefreshTimer && state.isRunning) {
+      if (state.mode == TimerMode.countdown && _deadline != null) {
+        final remaining = (_deadline!.difference(_now()).inMilliseconds / 1000)
+            .ceil()
+            .clamp(0, state.totalDurationSeconds);
+        if (remaining <= 3 && remaining > 0 && !_played) {
+          _played = true;
+          if (_settings.getPlayTimerSound()) _playSound();
         }
+        if (remaining == 0) {
+          _ticker?.cancel();
+          if (_settings.getPlayTimerSound()) {
+            HapticFeedback.lightImpact().catchError((_) {});
+          }
+          emit(
+            TimerRunComplete(
+              mode: state.mode,
+              totalDurationSeconds: state.totalDurationSeconds,
+            ),
+          );
+        } else {
+          emit(
+            TimerRunInProgress(
+              mode: state.mode,
+              currentSeconds: remaining,
+              totalDurationSeconds: state.totalDurationSeconds,
+            ),
+          );
+        }
+      } else if (state.mode == TimerMode.stopwatch && _started != null) {
         emit(
           TimerRunInProgress(
             mode: state.mode,
-            currentSeconds: event.elapsedSeconds,
-            totalDurationSeconds: state.totalDurationSeconds,
-          ),
-        );
-      } else {
-        _tickerSubscription?.cancel();
-        if (_localDbService.getPlayTimerSound()) {
-          HapticFeedback.heavyImpact();
-        }
-        emit(
-          TimerRunComplete(
-            mode: state.mode,
-            totalDurationSeconds: state.totalDurationSeconds,
+            currentSeconds: _now().difference(_started!).inSeconds,
           ),
         );
       }
-    } else if (state.mode == TimerMode.stopwatch) {
-      emit(
-        TimerRunInProgress(
-          mode: state.mode,
-          currentSeconds: event.elapsedSeconds,
-        ),
-      );
     }
   }
 
   @override
-  Future<void> close() {
-    _tickerSubscription?.cancel();
-    _audioPlayer.dispose();
-    return super.close();
+  Future<void> close() async {
+    _ticker?.cancel();
+    await _audio?.dispose();
+    await super.close();
   }
 }

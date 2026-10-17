@@ -23,8 +23,12 @@ class LocalDatabaseService {
   late Box<WorkoutSchedule> _workoutScheduleBox;
   late Box<dynamic> _settingsBox;
 
-  Future<void> init() async {
-    await Hive.initFlutter();
+  Future<void> init({String? path}) async {
+    if (path == null) {
+      await Hive.initFlutter();
+    } else {
+      Hive.init(path);
+    }
 
     // Register Adapters
     if (!Hive.isAdapterRegistered(0)) {
@@ -56,8 +60,9 @@ class LocalDatabaseService {
     _activeWorkoutBox = await Hive.openBox<ActiveWorkout>(
       _activeWorkoutBoxName,
     );
-    _workoutScheduleBox =
-        await Hive.openBox<WorkoutSchedule>(_workoutScheduleBoxName);
+    _workoutScheduleBox = await Hive.openBox<WorkoutSchedule>(
+      _workoutScheduleBoxName,
+    );
     _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
   }
 
@@ -84,12 +89,11 @@ class LocalDatabaseService {
   // --- Active Workout Cache ---
   ActiveWorkout? getActiveWorkout() {
     if (_activeWorkoutBox.isEmpty) return null;
-    return _activeWorkoutBox.getAt(0);
+    return _activeWorkoutBox.get('current') ?? _activeWorkoutBox.getAt(0);
   }
 
   Future<void> saveActiveWorkout(ActiveWorkout workout) async {
-    await _activeWorkoutBox.clear();
-    await _activeWorkoutBox.add(workout);
+    await _activeWorkoutBox.put('current', workout);
   }
 
   Future<void> clearActiveWorkout() async {
@@ -146,12 +150,11 @@ class LocalDatabaseService {
   /// Returns null if no schedule has been configured yet.
   WorkoutSchedule? getWorkoutSchedule() {
     if (_workoutScheduleBox.isEmpty) return null;
-    return _workoutScheduleBox.getAt(0);
+    return _workoutScheduleBox.get('current') ?? _workoutScheduleBox.getAt(0);
   }
 
   Future<void> saveWorkoutSchedule(WorkoutSchedule schedule) async {
-    await _workoutScheduleBox.clear();
-    await _workoutScheduleBox.add(schedule);
+    await _workoutScheduleBox.put('current', schedule);
   }
 
   Future<void> deleteWorkoutSchedule() async {
@@ -178,8 +181,9 @@ class LocalDatabaseService {
     _activeWorkoutBox = await Hive.openBox<ActiveWorkout>(
       _activeWorkoutBoxName,
     );
-    _workoutScheduleBox =
-        await Hive.openBox<WorkoutSchedule>(_workoutScheduleBoxName);
+    _workoutScheduleBox = await Hive.openBox<WorkoutSchedule>(
+      _workoutScheduleBoxName,
+    );
     _settingsBox = await Hive.openBox<dynamic>(_settingsBoxName);
   }
 }

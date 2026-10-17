@@ -25,6 +25,12 @@ class Exercise extends HiveObject {
   @HiveField(6)
   final String? imageUrl;
 
+  @HiveField(7, defaultValue: '')
+  final String note;
+
+  @HiveField(8, defaultValue: true)
+  final bool useDefaultRest;
+
   Exercise({
     required this.id,
     required this.name,
@@ -33,6 +39,8 @@ class Exercise extends HiveObject {
     this.targetWeight,
     this.restDurationSeconds = 90,
     this.imageUrl,
+    this.note = '',
+    this.useDefaultRest = true,
   });
 
   Exercise copyWith({
@@ -43,6 +51,8 @@ class Exercise extends HiveObject {
     double? targetWeight,
     int? restDurationSeconds,
     String? imageUrl,
+    String? note,
+    bool? useDefaultRest,
   }) {
     return Exercise(
       id: id ?? this.id,
@@ -52,6 +62,8 @@ class Exercise extends HiveObject {
       targetWeight: targetWeight ?? this.targetWeight,
       restDurationSeconds: restDurationSeconds ?? this.restDurationSeconds,
       imageUrl: imageUrl ?? this.imageUrl,
+      note: note ?? this.note,
+      useDefaultRest: useDefaultRest ?? this.useDefaultRest,
     );
   }
 }

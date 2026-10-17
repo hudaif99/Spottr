@@ -31,6 +31,7 @@
 
 ## UI quality
 
+- Design with a deliberate product identity and senior-level visual judgment. Avoid generic AI-looking templates; apply the review criteria in `docs/design.md`.
 - Use shared colors, typography, spacing, and components from the agreed design system.
 - Design for available width, text scaling, keyboard visibility, safe areas, and rotation.
 - Use appropriate Android/iOS interactions; make tablet layouts deliberate.
@@ -54,6 +55,9 @@
 - `spottr-classic` preserves the original app; do redesign work on `spottr-redesign`.
 - Do not include `codex` in branch names.
 - Keep commits small and use short, clear messages.
+- When asked to generate a commit message, inspect all changes since the last commit (`HEAD`), including staged, unstaged, and relevant untracked files.
+- Return a short, simple message covering only the main tasks completed. Omit minor cleanup, formatting, and incidental changes unless they are the main task.
+- Base the message on the actual diff, not conversation history. Generating a message does not authorize committing.
 - Protect unrelated changes. Do not reset or overwrite them.
 - Merge into `main` only after the agreed review and testing. Do not push or publish without authorization.
 - Keep user updates short: outcome, important limitation, next step.
