@@ -9,10 +9,11 @@ The current theme source is `lib/core/theme/app_theme.dart`, with shared typogra
 in `lib/core/theme/app_typography.dart`. Improve this direction through actual
 Flutter screens rather than more generated concepts.
 
-Proposed next polish: tighter workout hierarchy and spacing, shorter previous-set
-context, quieter Today headings, keyboard-friendly exercise editing, consistent
-secondary screens, and purposeful motion. These are suggestions, not completed work.
-Both themes, compact screens and large text must be reviewed during implementation.
+Phase 2 began on 17 October 2026. Implemented tighter workout hierarchy and spacing,
+shorter previous-set context with a details sheet, clearer set status, quieter Today
+headings and brief completion-check feedback that respects reduced motion.
+Keyboard-friendly exercise editing, consistent secondary screens and broader motion
+remain future polish. Native device and screen-reader review remain required.
 
 ### Stitch directions — rejected history
 

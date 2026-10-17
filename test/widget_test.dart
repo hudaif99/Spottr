@@ -158,6 +158,31 @@ void main() {
     await unmount(tester);
   });
 
+  for (final (size, scale, name) in [
+    (const Size(390, 844), 1.0, 'today-dark'),
+    (const Size(320, 568), 1.8, 'today-large-text'),
+  ]) {
+    testWidgets('Today remains usable in $name', (tester) async {
+      final (repo, _) = await mount(
+        tester,
+        const HomeScreen(),
+        size: size,
+        textScale: scale,
+        dark: true,
+      );
+      expect(tester.takeException(), isNull);
+      await capture(tester, name);
+      await tester.ensureVisible(find.text('Start workout'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start workout'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(repo.active!.day.id, day.id);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
   testWidgets('focused workout logs, undoes, and retains the setup cue', (
     tester,
   ) async {
@@ -173,6 +198,8 @@ void main() {
     await tester.pump(const Duration(milliseconds: 350));
     expect(repo.active!.exerciseLogs['kickback']!.first.isCompleted, isTrue);
     expect(find.text('Log set 2'), findsOneWidget);
+    expect(find.text('Set 2 of 3'), findsOneWidget);
+    expect(find.text('Logged'), findsOneWidget);
     await tester.ensureVisible(find.byTooltip('Undo set 1'));
     await tester.tap(find.byTooltip('Undo set 1'));
     await tester.pump();

@@ -13,6 +13,7 @@ import '../blocs/timer/timer_bloc.dart';
 import '../blocs/timer/timer_event.dart';
 import '../widgets/exercise_editor.dart';
 import '../widgets/spottr_button.dart';
+import '../widgets/previous_set_summary.dart';
 import '../widgets/workout_value_control.dart';
 
 class ActiveWorkoutScreen extends StatefulWidget {
@@ -234,7 +235,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                         ],
                       ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+                      padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -317,7 +318,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                           ),
                                         ),
                                       ),
-                                      const SizedBox(height: 16),
+                                      const SizedBox(height: 8),
                                       focus,
                                     ],
                                   ),
@@ -389,7 +390,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: Text(exercise.name, style: text.displaySmall)),
+            Expanded(child: Text(exercise.name, style: text.headlineLarge)),
             IconButton(
               tooltip: 'Edit exercise for this session',
               onPressed: state.isSaving
@@ -404,20 +405,29 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         ),
         if (exercise.note.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 10),
+            padding: const EdgeInsets.only(top: 4),
             child: Text(exercise.note, style: text.bodyMedium),
           ),
-        const SizedBox(height: 20),
-        Text(
-          previous.isEmpty
-              ? '${exercise.targetSets} sets · ${exercise.targetReps} reps · ${exercise.restDurationSeconds}s rest'
-              : 'Last time  ${previous.map((set) => '${formatWeight(set.weight)} kg × ${set.reps}').join(' / ')}',
-          style: text.bodyMedium,
-        ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 8),
+        if (previous.any((set) => set.isCompleted))
+          PreviousSetSummary(
+            sets: previous,
+            setIndex: selected == null
+                ? sets.length - 1
+                : sets.indexOf(selected),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Text(
+              '${exercise.targetSets} sets · ${exercise.targetReps} reps · ${exercise.restDurationSeconds}s rest',
+              style: text.bodyMedium,
+            ),
+          ),
+        const SizedBox(height: 12),
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: context.colors.surface,
             borderRadius: BorderRadius.circular(20),
@@ -459,12 +469,14 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                 )
               : Column(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      spacing: 12,
+                      runSpacing: 8,
                       children: [
                         Text(
-                          '${selected.isCompleted ? 'EDIT' : 'NEXT'} · SET ${sets.indexOf(selected) + 1}',
-                          style: text.labelMedium,
+                          '${selected.isCompleted ? 'Editing set' : 'Set'} ${sets.indexOf(selected) + 1} of ${sets.length}',
+                          style: text.titleMedium,
                         ),
                         if (selected.isWarmup || selected.isDropSet)
                           Text(
@@ -473,7 +485,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 12),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -516,7 +528,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 20),
                     SpottrButton(
                       text: selected.isCompleted
                           ? 'Done editing'
@@ -593,7 +605,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
               ),
             ),
           ),
-        const SizedBox(height: 28),
+        const SizedBox(height: 20),
         for (final (index, set) in sets.indexed)
           ListTile(
             contentPadding: EdgeInsets.zero,
@@ -602,9 +614,17 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
               child: Text('${index + 1}', style: text.bodyMedium),
             ),
             title: Text('${formatWeight(set.weight)} kg  ×  ${set.reps} reps'),
-            subtitle: set.isWarmup || set.isDropSet
-                ? Text(set.isWarmup ? 'Warm-up' : 'Drop set')
-                : null,
+            subtitle: Text(
+              [
+                if (set.isCompleted)
+                  'Logged'
+                else if (set.id == selected?.id)
+                  'Current set'
+                else
+                  'Not logged',
+                if (set.isWarmup) 'Warm-up' else if (set.isDropSet) 'Drop set',
+              ].join(' · '),
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -622,13 +642,19 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                             completed: !set.isCompleted,
                           ),
                         ),
-                  icon: Icon(
-                    set.isCompleted
-                        ? Icons.check_circle_rounded
-                        : Icons.circle_outlined,
-                    color: set.isCompleted
-                        ? context.colors.success
-                        : context.colors.secondaryText,
+                  icon: AnimatedSwitcher(
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 160),
+                    child: Icon(
+                      set.isCompleted
+                          ? Icons.check_circle_rounded
+                          : Icons.circle_outlined,
+                      key: ValueKey(set.isCompleted),
+                      color: set.isCompleted
+                          ? context.colors.success
+                          : context.colors.secondaryText,
+                    ),
                   ),
                 ),
                 PopupMenuButton<String>(

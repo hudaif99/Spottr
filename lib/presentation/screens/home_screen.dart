@@ -219,11 +219,11 @@ class _TodayState extends State<_Today> {
               const SizedBox(height: 12),
               Text(
                 workout is WorkoutInProgress
-                    ? 'Pick up where\nyou left off.'
-                    : 'A little stronger.\nOne set at a time.',
-                style: text.displayMedium,
+                    ? 'Ready to continue?'
+                    : 'Your next workout',
+                style: text.headlineLarge,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
               if (plans is PlansLoading || plans is PlansInitial)
                 const LinearProgressIndicator()
               else if (plans is PlansError)
@@ -233,7 +233,7 @@ class _TodayState extends State<_Today> {
                 ),
               if (workout is WorkoutInProgress)
                 _workoutCard(
-                  eyebrow: 'WORKOUT IN PROGRESS',
+                  eyebrow: 'Workout in progress',
                   name: workout.day.name,
                   description:
                       '${workout.exerciseLogs.values.expand((sets) => sets).where((set) => set.isCompleted).length} sets logged · saved on this device',
@@ -242,7 +242,7 @@ class _TodayState extends State<_Today> {
                 )
               else if (plan != null && day != null)
                 _workoutCard(
-                  eyebrow: plan.name.toUpperCase(),
+                  eyebrow: plan.name,
                   name: day.name,
                   description:
                       '${day.exercises.length} exercises · ${day.exercises.fold<int>(0, (sum, exercise) => sum + exercise.targetSets)} planned sets',
@@ -262,8 +262,8 @@ class _TodayState extends State<_Today> {
                 )
               else if (plans is PlansLoaded)
                 _workoutCard(
-                  eyebrow: 'YOUR FIRST STEP',
-                  name: 'Make room for\nyour routine.',
+                  eyebrow: 'Your first plan',
+                  name: 'Build your routine',
                   description:
                       'Add your exercises once. We’ll keep the logging simple.',
                   action: 'Create a plan',

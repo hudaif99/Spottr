@@ -42,10 +42,14 @@ class WorkoutValueControl extends StatelessWidget {
           foregroundColor: context.colors.primaryText,
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         ),
-        child: Text(
-          formatWeight(value),
-          style: Theme.of(context).textTheme.displayLarge?.copyWith(
-            fontFeatures: const [FontFeature.tabularFigures()],
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            formatWeight(value),
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+              fontSize: 42,
+              fontFeatures: const [FontFeature.tabularFigures()],
+            ),
           ),
         ),
       ),

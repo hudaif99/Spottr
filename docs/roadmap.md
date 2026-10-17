@@ -12,7 +12,7 @@
 | Phase | Deliverable | Exit criteria | Status |
 | --- | --- | --- | --- |
 | 1. Setup | Preserve app, create branch, add project guidance | Branch references and documentation verified | Complete |
-| 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Reference-led light anchor provisionally accepted; cleanup under review |
+| 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | In progress: existing Flutter direction retained; Active Workout/Today polish implemented |
 | 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Session reliability and visual tokens implemented; model extraction remains |
 | 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | First implementation slice; catalog and session replacement remain |
 | 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Session details implemented; remaining work planned |
@@ -23,7 +23,19 @@ Implementation phases may deliver small end-to-end slices; avoid building unused
 
 ## Phase 2 decisions
 
-### Current review — 12 October 2026
+### Current work — 17 October 2026
+
+- The user authorized Phase 2 after choosing the existing Flutter UI over all Stitch concepts.
+- Keep Outfit and the implemented mineral/forest light and deep green/sage dark themes.
+- First polish slice: clearer set status, tighter workout spacing, relevant previous-set context,
+  accessible previous-session details, quieter Today headings and brief completion feedback.
+- Editors/settings, broader motion, remaining Progress decisions and native device review remain.
+- The older Stitch decisions below are historical and do not authorize a different visual system.
+- Verified this slice with 12 focused widget tests and clean analysis of changed code/tests.
+  Reviewed captured Flutter screens in both themes, compact/large-text layouts and tablet layout.
+  Native Android/iOS interaction, device and screen-reader checks remain outstanding.
+
+### Historical review — 12 October 2026
 
 - The user provisionally accepted Spottr · Reference-led Workout and requested
   removal of unnecessary components. Keep this light direction and refine it;

@@ -1,6 +1,17 @@
 # Experience proposal
 
-## Current design review — 12 October 2026
+## Current implementation — 17 October 2026
+
+The user rejected the Stitch concepts and authorized Phase 2 using the existing
+Flutter identity. Active Workout now has tighter spacing, sentence-case set position,
+explicit logged/unlogged labels and brief completion-check feedback. Reduced motion
+disables that animation. Today gives the next workout more prominence than its heading.
+
+Previous performance shows the corresponding completed-set position, falling back
+to the final completed set when needed. Tapping it opens a scrollable list of completed
+sets from the previous session. This changes display only; prefill and persistence rules remain.
+
+## Historical design review — 12 October 2026
 
 The user rejected the earlier generated concepts and agreed on a direction drawn
 from two Behance references: soft rounded healthcare composition with the nutrition
