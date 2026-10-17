@@ -26,13 +26,14 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       imageUrl: fields[6] as String?,
       note: fields[7] == null ? '' : fields[7] as String,
       useDefaultRest: fields[8] == null ? true : fields[8] as bool,
+      identityId: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Exercise obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +51,9 @@ class ExerciseAdapter extends TypeAdapter<Exercise> {
       ..writeByte(7)
       ..write(obj.note)
       ..writeByte(8)
-      ..write(obj.useDefaultRest);
+      ..write(obj.useDefaultRest)
+      ..writeByte(9)
+      ..write(obj.identityId);
   }
 
   @override

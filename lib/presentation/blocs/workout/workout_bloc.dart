@@ -4,6 +4,7 @@ import '../../../domain/models/active_workout.dart';
 import '../../../domain/models/exercise.dart';
 import '../../../domain/models/set_log.dart';
 import '../../../domain/models/workout_log.dart';
+import '../../../domain/exercise_identity.dart';
 import '../../../domain/repositories/workout_repository.dart';
 import '../../../notifications/workout_reminder_scheduler.dart';
 import 'workout_event.dart';
@@ -124,18 +125,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       if (state is WorkoutInProgress) return;
       try {
         final history = await _repository.getWorkoutLogs();
-        history.sort((a, b) => b.startTime.compareTo(a.startTime));
         final previous = <String, List<SetLog>>{};
         for (final exercise in event.day.exercises) {
-          for (final log in history) {
-            final sets = (log.exerciseLogs[exercise.id] ?? [])
-                .where((set) => set.isCompleted)
-                .toList();
-            if (sets.isNotEmpty) {
-              previous[exercise.id] = sets;
-              break;
-            }
-          }
+          previous[exercise.id] = previousSetsForExercise(exercise, history);
         }
         await _save(
           WorkoutInProgress(
@@ -189,6 +181,10 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
                 for (final exercise in current.day.exercises)
                   exercise.id: exercise.name,
               },
+              exerciseIdentities: {
+                for (final exercise in current.day.exercises)
+                  exercise.id: exercise.identityId,
+              },
             ),
           );
           saved = true;
@@ -228,21 +224,133 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       );
       return;
     }
-    if (event is EditSessionExercise) {
+    if (event is MoveSessionExercise) {
+      if (event.offset != -1 && event.offset != 1) return;
+      final exercises = [...current.day.exercises];
+      final index = exercises.indexWhere(
+        (exercise) => exercise.id == event.exerciseId,
+      );
+      final destination = index + event.offset;
+      if (index < 0 || destination < 0 || destination >= exercises.length) {
+        return;
+      }
+      exercises.insert(destination, exercises.removeAt(index));
+      await _save(
+        current.copyWith(
+          day: current.day.copyWith(exercises: exercises),
+          exerciseLogs: {
+            for (final exercise in exercises)
+              if (current.exerciseLogs.containsKey(exercise.id))
+                exercise.id: current.exerciseLogs[exercise.id]!,
+            ...current.exerciseLogs,
+          },
+        ),
+        emit,
+      );
+      return;
+    }
+    if (event is EditSessionExercise || event is ReplaceSessionExercise) {
+      final replacing = event is ReplaceSessionExercise;
+      final updated = switch (event) {
+        EditSessionExercise(:final exercise) => exercise,
+        ReplaceSessionExercise(:final replacement) => replacement,
+        _ => throw StateError('Unsupported exercise change'),
+      };
+      final originalId = event is ReplaceSessionExercise
+          ? event.exerciseId
+          : updated.id;
+      final original = current.day.exercises
+          .where((exercise) => exercise.id == originalId)
+          .firstOrNull;
+      if (original == null) return;
+      if (replacing &&
+          (updated.id == original.id ||
+              current.day.exercises.any(
+                (exercise) => exercise.id == updated.id,
+              ))) {
+        return;
+      }
+      final completed =
+          current.exerciseLogs[original.id]?.any((set) => set.isCompleted) ??
+          false;
+      if (completed &&
+          (replacing ||
+              original.identityId != updated.identityId ||
+              original.name != updated.name)) {
+        return;
+      }
+      final resetSuggestions =
+          replacing || original.identityId != updated.identityId;
+      var previous =
+          current.previousExerciseLogs[original.id] ?? const <SetLog>[];
+      if (resetSuggestions) {
+        try {
+          previous = previousSetsForExercise(
+            updated,
+            await _repository.getWorkoutLogs(),
+          );
+        } catch (_) {
+          emit(
+            current.copyWith(
+              errorMessage:
+                  'Could not load exercise history. Your workout is unchanged; try again.',
+            ),
+          );
+          return;
+        }
+      }
       final exercises = current.day.exercises
           .map(
-            (exercise) => exercise.id == event.exercise.id
-                ? _resolveRest(event.exercise)
-                : exercise,
+            (exercise) =>
+                exercise.id == original.id ? _resolveRest(updated) : exercise,
           )
           .toList();
+      final previousLogs = {...current.previousExerciseLogs};
+      final logs = {...current.exerciseLogs};
+      if (resetSuggestions) {
+        previousLogs.remove(original.id);
+        previousLogs[updated.id] = previous;
+        logs.remove(original.id);
+        logs[updated.id] = _suggestedSets(updated, previous);
+      }
       await _save(
-        current.copyWith(day: current.day.copyWith(exercises: exercises)),
+        current.copyWith(
+          day: current.day.copyWith(exercises: exercises),
+          previousExerciseLogs: resetSuggestions ? previousLogs : null,
+          exerciseLogs: resetSuggestions
+              ? {
+                  for (final exercise in exercises)
+                    if (logs.containsKey(exercise.id))
+                      exercise.id: logs[exercise.id]!,
+                  ...logs,
+                }
+              : null,
+        ),
         emit,
       );
       return;
     }
     if (event is AddSessionExercise) {
+      if (current.day.exercises.any(
+        (exercise) => exercise.id == event.exercise.id,
+      )) {
+        return;
+      }
+      List<SetLog> previous;
+      try {
+        previous = previousSetsForExercise(
+          event.exercise,
+          await _repository.getWorkoutLogs(),
+        );
+      } catch (_) {
+        emit(
+          current.copyWith(
+            errorMessage:
+                'Could not load exercise history. Your workout is unchanged; try again.',
+          ),
+        );
+        return;
+      }
       await _save(
         current.copyWith(
           day: current.day.copyWith(
@@ -250,7 +358,11 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
           ),
           exerciseLogs: {
             ...current.exerciseLogs,
-            event.exercise.id: _suggestedSets(event.exercise, []),
+            event.exercise.id: _suggestedSets(event.exercise, previous),
+          },
+          previousExerciseLogs: {
+            ...current.previousExerciseLogs,
+            event.exercise.id: previous,
           },
         ),
         emit,
@@ -264,6 +376,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     if (event is RemoveSet) exerciseId = event.exerciseId;
     if (event is RestoreSet) exerciseId = event.exerciseId;
     if (exerciseId == null) return;
+    if (!current.day.exercises.any((exercise) => exercise.id == exerciseId)) {
+      return;
+    }
     final sets = [...logs[exerciseId] ?? <SetLog>[]];
     DateTime? restUntil;
     if (event is AddSet) {
@@ -367,10 +482,14 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       final session = history.where((log) => log.id == sessionId).firstOrNull;
       if (session == null) return;
       for (final entry in session.exerciseLogs.entries) {
+        final exercise = Exercise(
+          id: entry.key,
+          name: session.exerciseNames[entry.key] ?? '',
+          identityId: session.exerciseIdentities[entry.key],
+        );
         final previous = history
             .where((log) => log.id != sessionId)
-            .expand((log) => log.exerciseLogs[entry.key] ?? <SetLog>[])
-            .where((set) => set.isCompleted)
+            .expand((log) => completedSetsForExercise(exercise, log))
             .toList();
         if (previous.isEmpty) continue;
         for (final set in entry.value.where((set) => set.isCompleted)) {

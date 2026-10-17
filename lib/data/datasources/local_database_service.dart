@@ -153,15 +153,18 @@ class LocalDatabaseService {
     String? gender,
     double? height,
     double? weight,
-  }) => _write(
-    () => _settingsBox.putAll({
+  }) {
+    final values = <String, dynamic>{
       'user_name': name,
       'user_age': age,
       'user_height': height,
       'user_weight': weight,
-      'user_gender': ?gender,
-    }),
-  );
+    };
+    if (gender != null) {
+      values['user_gender'] = gender;
+    }
+    return _write(() => _settingsBox.putAll(values));
+  }
 
   String? getUserName() => _settingsBox.get('user_name') as String?;
   Future<void> saveUserName(String name) async =>

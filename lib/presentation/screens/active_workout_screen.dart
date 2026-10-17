@@ -12,6 +12,7 @@ import '../blocs/workout/workout_state.dart';
 import '../blocs/timer/timer_bloc.dart';
 import '../blocs/timer/timer_event.dart';
 import '../widgets/exercise_editor.dart';
+import '../widgets/exercise_picker.dart';
 import '../widgets/spottr_button.dart';
 import '../widgets/previous_set_summary.dart';
 import '../widgets/workout_value_control.dart';
@@ -23,7 +24,16 @@ class ActiveWorkoutScreen extends StatefulWidget {
 }
 
 class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
-  int _selected = 0;
+  String? _selectedExerciseId;
+  int get _selected {
+    final state = context.read<WorkoutBloc>().state;
+    if (state is! WorkoutInProgress) return 0;
+    final index = state.day.exercises.indexWhere(
+      (exercise) => exercise.id == _selectedExerciseId,
+    );
+    return index < 0 ? 0 : index;
+  }
+
   String? _editingSet;
   bool _hadSession = false;
   late final Timer _ticker;
@@ -71,7 +81,13 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 
   void _select(int index) => setState(() {
-    _selected = index;
+    final state = context.read<WorkoutBloc>().state;
+    if (state is! WorkoutInProgress ||
+        index < 0 ||
+        index >= state.day.exercises.length) {
+      return;
+    }
+    _selectedExerciseId = state.day.exercises[index].id;
     _editingSet = null;
   });
 
@@ -87,12 +103,39 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 
   Future<void> _addExercise() async {
-    final exercise = await showExerciseEditor(context);
+    final state = context.read<WorkoutBloc>().state;
+    final exercise = await showExercisePicker(
+      context,
+      localExercises: state is WorkoutInProgress
+          ? state.day.exercises
+          : const [],
+    );
     if (exercise != null && mounted) {
-      final current = context.read<WorkoutBloc>().state;
-      if (current is WorkoutInProgress) _select(current.day.exercises.length);
+      setState(() {
+        _selectedExerciseId = exercise.id;
+        _editingSet = null;
+      });
       context.read<WorkoutBloc>().add(AddSessionExercise(exercise));
     }
+  }
+
+  Future<void> _replaceExercise(String exerciseId) async {
+    final state = context.read<WorkoutBloc>().state;
+    final replacement = await showExercisePicker(
+      context,
+      replacing: true,
+      localExercises: state is WorkoutInProgress
+          ? state.day.exercises
+          : const [],
+    );
+    if (replacement == null || !mounted) return;
+    setState(() {
+      _selectedExerciseId = replacement.id;
+      _editingSet = null;
+    });
+    context.read<WorkoutBloc>().add(
+      ReplaceSessionExercise(exerciseId: exerciseId, replacement: replacement),
+    );
   }
 
   Future<void> _finish(WorkoutInProgress state, {bool discard = false}) async {
@@ -736,13 +779,21 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     children: [
       Padding(
         padding: const EdgeInsets.all(12),
-        child: Text(
-          'Your workout',
-          style: Theme.of(context).textTheme.titleLarge,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Your workout', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 4),
+            Text(
+              'Changes apply to this session only.',
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
         ),
       ),
       for (final (index, exercise) in state.day.exercises.indexed)
         ListTile(
+          key: ValueKey('overview-${exercise.id}'),
           selected: index == _selected,
           selectedTileColor: context.colors.primaryAccent.withValues(
             alpha: .08,
@@ -754,6 +805,54 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           subtitle: Text(
             '${(state.exerciseLogs[exercise.id] ?? []).where((set) => set.isCompleted).length} of ${(state.exerciseLogs[exercise.id] ?? []).length} sets',
           ),
+          trailing: PopupMenuButton<String>(
+            tooltip: 'Options for ${exercise.name}',
+            enabled: !state.isSaving && !state.completionPending,
+            onSelected: (action) {
+              if (action == 'replace') {
+                if (dismiss) Navigator.pop(context);
+                _replaceExercise(exercise.id);
+              } else {
+                context.read<WorkoutBloc>().add(
+                  MoveSessionExercise(
+                    exerciseId: exercise.id,
+                    offset: action == 'earlier' ? -1 : 1,
+                  ),
+                );
+              }
+            },
+            itemBuilder: (_) => [
+              PopupMenuItem(
+                value: 'earlier',
+                enabled: index > 0,
+                child: const Text('Move earlier'),
+              ),
+              PopupMenuItem(
+                value: 'later',
+                enabled: index < state.day.exercises.length - 1,
+                child: const Text('Move later'),
+              ),
+              PopupMenuItem(
+                value: 'replace',
+                enabled: !(state.exerciseLogs[exercise.id] ?? []).any(
+                  (set) => set.isCompleted,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Replace exercise'),
+                    if ((state.exerciseLogs[exercise.id] ?? []).any(
+                      (set) => set.isCompleted,
+                    ))
+                      Text(
+                        'Already has logged sets',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
           onTap: () {
             _select(index);
             if (dismiss) Navigator.pop(context);
@@ -761,7 +860,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         ),
       const SizedBox(height: 12),
       TextButton.icon(
-        onPressed: state.isSaving
+        onPressed: state.isSaving || state.completionPending
             ? null
             : () {
                 if (dismiss) Navigator.pop(context);
@@ -776,9 +875,17 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   void _showOverview(WorkoutInProgress state) => showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
-    builder: (_) => SizedBox(
-      height: MediaQuery.sizeOf(context).height * .65,
-      child: _overview(state, dismiss: true),
+    showDragHandle: true,
+    builder: (_) => SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * .65,
+        child: BlocBuilder<WorkoutBloc, WorkoutState>(
+          bloc: context.read<WorkoutBloc>(),
+          builder: (_, current) => current is WorkoutInProgress
+              ? _overview(current, dismiss: true)
+              : const SizedBox.shrink(),
+        ),
+      ),
     ),
   );
 }

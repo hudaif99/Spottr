@@ -45,6 +45,7 @@ release checks. These host tests do not establish native readiness.
 ## Remaining foundation work
 
 Validated backup/restore was implemented in the next slice; see [backup-restore.md](backup-restore.md).
-Keep stable cross-plan exercise identity as a separate slice. Storage
+Shared identity was then implemented with additive fields; see [exercise-identity.md](exercise-identity.md).
+Storage
 records must stay backward compatible until any future migration has explicit compatibility tests.
 Settings still use their existing service boundary; this extraction adds no speculative infrastructure.

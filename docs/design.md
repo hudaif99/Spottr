@@ -24,6 +24,19 @@ Schedule details use open rows, accessible day selection, adaptive time pickers 
 feedback. Both constrain content on tablets and scroll at large text sizes. Broader motion remains.
 Native device and screen-reader review remain required.
 
+The workout overview now provides move-earlier, move-later and replace actions in each
+exercise's options menu. It stays live while the phone sheet is open and shares the same
+rows on tablets. Selection follows entry identity through moves. Logged exercises show
+why replacement is unavailable; users can add an alternative while retaining logged work.
+Replacement uses the shared editor with a clear session-only explanation and fresh fields.
+Keep these controls secondary to logging; no drag gesture is required.
+
+Plan additions and session add/replace now open a searchable picker. Use open rows,
+saved setup cues and quiet source labels, with your exercises before common choices.
+Selection adds a fresh entry directly; the existing details editor handles later adjustments.
+Keep custom creation available during loading, empty and error states. Short keyboard layouts
+scroll the header and actions with the list; standard layouts keep the create action reachable.
+
 Progress uses a compact all-time summary and month-grouped session rows with a clear date
 column. Large text switches metrics to compact inline values. Workout details preserve saved
 exercise names, original set positions and logged-set types. Empty and load-error states explain

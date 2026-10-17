@@ -78,6 +78,25 @@ class AddSessionExercise extends WorkoutEvent {
   List<Object?> get props => [exercise];
 }
 
+class ReplaceSessionExercise extends WorkoutEvent {
+  final String exerciseId;
+  final Exercise replacement;
+  const ReplaceSessionExercise({
+    required this.exerciseId,
+    required this.replacement,
+  });
+  @override
+  List<Object?> get props => [exerciseId, replacement];
+}
+
+class MoveSessionExercise extends WorkoutEvent {
+  final String exerciseId;
+  final int offset;
+  const MoveSessionExercise({required this.exerciseId, required this.offset});
+  @override
+  List<Object?> get props => [exerciseId, offset];
+}
+
 class AddSet extends WorkoutEvent {
   final String exerciseId;
   const AddSet(this.exerciseId);

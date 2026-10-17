@@ -11,6 +11,7 @@ import 'package:spottr/data/datasources/local_database_service.dart';
 import 'package:spottr/domain/models/exercise.dart';
 import 'package:spottr/domain/models/plan.dart';
 import 'package:spottr/domain/models/workout_day.dart';
+import 'package:spottr/domain/repositories/workout_repository.dart';
 import 'package:spottr/presentation/blocs/history/history_bloc.dart';
 import 'package:spottr/presentation/blocs/history/history_event.dart';
 import 'package:spottr/presentation/blocs/plans/plans_bloc.dart';
@@ -24,13 +25,26 @@ import 'package:spottr/presentation/blocs/workout/workout_state.dart';
 import 'package:spottr/presentation/screens/active_workout_screen.dart';
 import 'package:spottr/presentation/screens/home_screen.dart';
 import 'package:spottr/presentation/screens/plan_management_screen.dart';
+import 'package:spottr/presentation/screens/create_plan_screen.dart';
 import 'package:spottr/presentation/widgets/spottr_button.dart';
 import 'package:spottr/presentation/widgets/exercise_editor.dart';
+import 'package:spottr/presentation/widgets/exercise_picker.dart';
 import 'support/fake_workout_repository.dart';
 
 class _Preferences extends LocalDatabaseService {
   @override
   bool getPlayTimerSound() => false;
+}
+
+class _LibraryRepository extends FakeWorkoutRepository {
+  Completer<void>? loadGate;
+  bool failLibrary = false;
+  @override
+  Future<List<Exercise>> getExercises() async {
+    await loadGate?.future;
+    if (failLibrary) throw StateError('Unavailable');
+    return super.getExercises();
+  }
 }
 
 void main() {
@@ -73,12 +87,14 @@ void main() {
     double textScale = 1,
     bool start = false,
     Plan? initialPlan,
+    FakeWorkoutRepository? repository,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final repo = FakeWorkoutRepository()..plans.add(initialPlan ?? plan);
+    final repo = (repository ?? FakeWorkoutRepository())
+      ..plans.add(initialPlan ?? plan);
     final workout = WorkoutBloc(repo);
     final plans = PlansBloc(repo)..add(LoadPlans());
     final history = HistoryBloc(repo)..add(LoadHistory());
@@ -100,25 +116,28 @@ void main() {
       await ready;
     }
     await tester.pumpWidget(
-      MultiBlocProvider(
-        providers: [
-          BlocProvider.value(value: workout),
-          BlocProvider.value(value: plans),
-          BlocProvider.value(value: history),
-          BlocProvider.value(value: settings),
-          BlocProvider.value(value: timer),
-        ],
-        child: RepaintBoundary(
-          key: boundary,
-          child: MaterialApp(
-            theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
-            builder: (context, child) => MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(textScale)),
-              child: child!,
+      RepositoryProvider<WorkoutRepository>.value(
+        value: repo,
+        child: MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: workout),
+            BlocProvider.value(value: plans),
+            BlocProvider.value(value: history),
+            BlocProvider.value(value: settings),
+            BlocProvider.value(value: timer),
+          ],
+          child: RepaintBoundary(
+            key: boundary,
+            child: MaterialApp(
+              theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+              builder: (context, child) => MediaQuery(
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.linear(textScale)),
+                child: child!,
+              ),
+              home: screen,
             ),
-            home: screen,
           ),
         ),
       ),
@@ -148,6 +167,268 @@ void main() {
       image.dispose();
     });
   }
+
+  for (final (size, scale, dark, name) in [
+    (const Size(390, 844), 1.0, false, 'exercise-picker-light'),
+    (const Size(390, 844), 1.0, true, 'exercise-picker-dark'),
+    (const Size(320, 568), 1.8, true, 'exercise-picker-large-text'),
+    (const Size(1194, 834), 1.0, false, 'exercise-picker-tablet'),
+  ]) {
+    testWidgets('picker reuses setup with a new entry in $name', (
+      tester,
+    ) async {
+      Exercise? selected;
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async => selected = await showExercisePicker(
+                context,
+                localExercises: exercises,
+              ),
+              child: const Text('Choose'),
+            ),
+          ),
+        ),
+        size: size,
+        textScale: scale,
+        dark: dark,
+      );
+      await tester.tap(find.text('Choose'));
+      await tester.pumpAndSettle();
+      await capture(tester, name);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search'),
+        'hex bar',
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Trap bar deadlift'), findsOneWidget);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search'),
+        'pulley',
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(
+        find.byKey(ValueKey('pick-${exercises.first.identityId}')),
+      );
+      await tester.tap(
+        find.byKey(ValueKey('pick-${exercises.first.identityId}')),
+      );
+      await tester.pumpAndSettle();
+      expect(selected!.id, isNot(exercises.first.id));
+      expect(selected!.identityId, exercises.first.identityId);
+      expect(selected!.note, exercises.first.note);
+      expect(selected!.targetWeight, exercises.first.targetWeight);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets(
+    'picker keeps custom entry and search usable through a compact keyboard',
+    (tester) async {
+      Exercise? selected;
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async =>
+                  selected = await showExercisePicker(context),
+              child: const Text('Choose'),
+            ),
+          ),
+        ),
+        size: const Size(568, 320),
+      );
+      await tester.tap(find.text('Choose'));
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 160);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search'),
+        'My trainer movement',
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.scrollUntilVisible(
+        find.text('Create exercise'),
+        80,
+        scrollable: find.byWidgetPredicate(
+          (widget) =>
+              widget is Scrollable &&
+              widget.axisDirection == AxisDirection.down,
+        ),
+      );
+      await tester.tap(find.text('Create exercise'));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<TextFormField>(find.byType(TextFormField).first)
+            .controller!
+            .text,
+        'My trainer movement',
+      );
+      tester.view.viewInsets = const FakeViewPadding();
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Add exercise'));
+      await tester.tap(find.text('Add exercise'));
+      await tester.pumpAndSettle();
+      expect(selected!.name, 'My trainer movement');
+      expect(selected!.identityId, startsWith('custom:'));
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'adding a saved custom movement keeps shared history and plan ownership',
+    (tester) async {
+      final (repo, _) = await mount(
+        tester,
+        const ActiveWorkoutScreen(),
+        start: true,
+      );
+      final custom = Exercise(
+        id: 'saved-custom',
+        name: 'Trainer row',
+        note: 'Seat at 3',
+        targetWeight: 30,
+      );
+      repo.exercises.add(custom);
+      await tester.tap(find.text('Exercise 1 of 3 · overview'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add exercise'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search'),
+        'Trainer row',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('pick-${custom.identityId}')));
+      await tester.pumpAndSettle();
+      final added = repo.active!.day.exercises.last;
+      expect(added.id, isNot(custom.id));
+      expect(added.identityId, custom.identityId);
+      expect(added.note, 'Seat at 3');
+      expect(repo.active!.exerciseLogs[added.id]!.first.weight, 30);
+      expect(repo.plans.single.days.single.exercises, hasLength(3));
+      expect(repo.exercises.single, same(custom));
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('picker search stays responsive during load and error retry', (
+    tester,
+  ) async {
+    final repo = _LibraryRepository()
+      ..loadGate = Completer<void>()
+      ..failLibrary = true;
+    await mount(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () => showExercisePicker(context),
+            child: const Text('Choose'),
+          ),
+        ),
+      ),
+      repository: repo,
+      dark: true,
+    );
+    await tester.tap(find.text('Choose'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.enterText(find.widgetWithText(TextField, 'Search'), 'hex bar');
+    await tester.pump();
+    expect(find.text('Trap bar deadlift'), findsOneWidget);
+    expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 250));
+    await capture(tester, 'exercise-picker-loading-dark');
+    repo.loadGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsOneWidget);
+    expect(find.text('Trap bar deadlift'), findsOneWidget);
+    await capture(tester, 'exercise-picker-error-dark');
+    repo.failLibrary = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry'), findsNothing);
+    expect(find.text('Trap bar deadlift'), findsOneWidget);
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Search'),
+      'New custom movement',
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'exercise-picker-empty-dark');
+    await tester.tap(find.text('Create exercise'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Cancel').last);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<TextField>(find.widgetWithText(TextField, 'Search'))
+          .controller!
+          .text,
+      'New custom movement',
+    );
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
+
+  testWidgets(
+    'plan additions reuse custom identity while keeping entry details independent',
+    (tester) async {
+      final (repo, _) = await mount(
+        tester,
+        Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => CreatePlanScreen(plan: plan),
+                ),
+              ),
+              child: const Text('Edit routine'),
+            ),
+          ),
+        ),
+      );
+      final custom = Exercise(
+        id: 'saved-custom',
+        name: 'Trainer row',
+        note: 'Seat at 3',
+      );
+      repo.exercises.add(custom);
+      await tester.tap(find.text('Edit routine'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Add exercise'));
+      await tester.tap(find.text('Add exercise'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search'),
+        'Trainer row',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(ValueKey('pick-${custom.identityId}')));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Save plan'));
+      await tester.tap(find.text('Save plan'));
+      await tester.pumpAndSettle();
+      final added = repo.plans.single.days.single.exercises.last;
+      expect(added.id, isNot(custom.id));
+      expect(added.identityId, custom.identityId);
+      expect(added.note, 'Seat at 3');
+      expect(repo.exercises.single, same(custom));
+      expect(plan.days.single.exercises, hasLength(3));
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
 
   testWidgets('Today starts the suggested workout with one tap', (
     tester,
@@ -214,6 +495,120 @@ void main() {
     expect(tester.takeException(), isNull);
     await unmount(tester);
   });
+
+  for (final (size, scale, dark, name) in [
+    (const Size(390, 844), 1.0, false, 'workout-overview-light'),
+    (const Size(390, 844), 1.0, true, 'workout-overview-dark'),
+    (const Size(320, 568), 1.8, true, 'workout-overview-large-text'),
+    (const Size(1194, 834), 1.0, false, 'workout-overview-tablet'),
+  ]) {
+    testWidgets('session moves preserve focus and logged work in $name', (
+      tester,
+    ) async {
+      final (repo, _) = await mount(
+        tester,
+        const ActiveWorkoutScreen(),
+        start: true,
+        size: size,
+        textScale: scale,
+        dark: dark,
+      );
+      await tester.ensureVisible(find.text('Log set 1'));
+      await tester.tap(find.text('Log set 1'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      if (size.width < 840) {
+        await tester.ensureVisible(find.text('Exercise 1 of 3 · overview'));
+        await tester.tap(find.text('Exercise 1 of 3 · overview'));
+        await tester.pumpAndSettle();
+      }
+      await capture(tester, name);
+      await tester.ensureVisible(find.byTooltip('Options for Leg press'));
+      await tester.tap(find.byTooltip('Options for Leg press'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Move earlier'));
+      await tester.pumpAndSettle();
+      expect(repo.active!.day.exercises.map((exercise) => exercise.id), [
+        'legpress',
+        'kickback',
+        'rdl',
+      ]);
+      expect(repo.active!.exerciseLogs['kickback']!.first.isCompleted, isTrue);
+      final rows = tester
+          .widgetList<ListTile>(find.byType(ListTile))
+          .where(
+            (row) =>
+                row.key is ValueKey<String> &&
+                (row.key! as ValueKey<String>).value.startsWith('overview-'),
+          )
+          .toList();
+      expect(rows.first.key, const ValueKey('overview-legpress'));
+      expect(rows[1].selected, isTrue);
+      await tester.ensureVisible(find.byTooltip('Options for Cable kickback'));
+      await tester.tap(find.byTooltip('Options for Cable kickback'));
+      await tester.pumpAndSettle();
+      final replace = tester.widget<PopupMenuItem<String>>(
+        find.ancestor(
+          of: find.text('Replace exercise'),
+          matching: find.byType(PopupMenuItem<String>),
+        ),
+      );
+      expect(replace.enabled, isFalse);
+      await capture(tester, '$name-options');
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets(
+    'overview replacement starts fresh and saves only to the session',
+    (tester) async {
+      final (repo, _) = await mount(
+        tester,
+        const ActiveWorkoutScreen(),
+        start: true,
+      );
+      await tester.tap(find.text('Exercise 1 of 3 · overview'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Options for Cable kickback'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Replace exercise'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Create exercise'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          'Replaces unlogged sets in this workout. Your plan stays unchanged.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<TextFormField>(find.byKey(const ValueKey('Setup note')))
+            .controller!
+            .text,
+        isEmpty,
+      );
+      await tester.enterText(find.byType(TextFormField).first, 'Barbell squat');
+      await tester.testTextInput.receiveAction(TextInputAction.next);
+      await tester.pumpAndSettle();
+      await capture(tester, 'workout-replacement-light');
+      await tester.tap(find.widgetWithText(SpottrButton, 'Replace exercise'));
+      await tester.pumpAndSettle();
+      final updated = repo.active!.day.exercises.first;
+      expect(updated.name, 'Barbell squat');
+      expect(updated.id, isNot('kickback'));
+      expect(updated.note, isEmpty);
+      expect(repo.active!.exerciseLogs.containsKey('kickback'), isFalse);
+      expect(
+        repo.plans.single.days.single.exercises.first.name,
+        'Cable kickback',
+      );
+      expect(find.text('Barbell squat'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
 
   for (final (size, scale, dark, name) in [
     (const Size(320, 568), 1.0, false, 'workout-small'),

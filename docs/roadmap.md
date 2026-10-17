@@ -13,8 +13,8 @@
 | --- | --- | --- | --- |
 | 1. Setup | Preserve app, create branch, add project guidance | Branch references and documentation verified | Complete |
 | 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Implementation reviewed; user/native-device sign-off pending |
-| 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | In progress: model boundary, validated backups and restore recovery implemented |
-| 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | First implementation slice; catalog and session replacement remain |
+| 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Implementation review complete; native acceptance checks remain |
+| 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | Session changes and exercise reuse implemented; core-flow review remains |
 | 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Session details implemented; remaining work planned |
 | 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Planned |
 
@@ -115,11 +115,11 @@ Implementation phases may deliver small end-to-end slices; avoid building unused
 - Earlier exploration files are historical artifacts and are not current generation
   instructions. Use docs/stitch-image-reference-pass.md for the current working anchor.
 
-Focus remains selected. Plan-entry notes copy into sessions; session edits affect only
+At the Phase 2 checkpoint, Focus remained selected. Plan-entry notes copy into sessions; session edits affect only
 the workout; prefill uses completed history for the existing entry identity; only
 explicitly completed sets count, including existing completed warm-ups.
-Shared exercise identity, session replacement/reordering, trends and record definitions
-remain future work. Timed/bodyweight, dedicated warm-up/drop-set and supersets need
+Shared exercise identity was subsequently implemented in Phase 3. Session replacement/reordering,
+trends and record definitions remain future work. Timed/bodyweight, dedicated warm-up/drop-set and supersets need
 separate product decisions. Preserve current recovery, persistence and Hive contracts.
 
 ## Phase 3 foundation
@@ -152,23 +152,90 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 - Native pickers/sharing, notification delivery, actual process interruption and iOS builds remain release checks.
 - Next Phase 3 slice: stable exercise identity across plans, with a separately reviewed data migration.
 
+### Shared exercise identity — 17 October 2026
+
+- Kept plan-entry IDs and introduced movement identity shared by exact catalog matches across plans.
+- Kept custom names separate unless their explicit identity is reused. Aliases only help suggestion search.
+- Snapshotted identity with new history; preserved old names, notes, targets, set keys and totals.
+- Used completed matching history for new plans and session additions; changing an unlogged movement
+  resets suggestions, while logged names/identities stay protected. Existing record rules now compare matching movements.
+- Added backward-compatible Exercise field 9 and WorkoutLog field 8; regenerated adapters and verified
+  both classic and pre-identity fixtures. No bulk rewrite or name-based merging of old history was performed.
+- Policy, compatible migration and custom-reuse UI limitations are in [exercise-identity.md](exercise-identity.md).
+- Verification: all 99 tests passed; 17 storage/backup checks passed again after the generator-compatible
+  profile-map adjustment. Formatting and changed-code analysis are clean. Native migration/build checks remain.
+- Next: finish the Phase 3 implementation review, then session exercise replacement/reordering in Phase 4.
+
+### Foundation review — 17 October 2026
+
+- Completed the focused model, mapping, identity, session persistence and restore-recovery review.
+- Reran 43 relevant identity, compatibility, real-storage, backup and workout tests: all passed.
+- No additional implementation blocker was found in the reviewed paths. No app code changed in this review.
+- Recorded acceptance limits and the next feature boundary in [phase-3-review.md](phase-3-review.md).
+- Phase 3 implementation review is complete; native migration, interruption, sharing and iOS checks remain.
+- Next: Phase 4 session-only exercise replacement/reordering, preserving logged work and the saved plan.
+
+## Phase 4 core app
+
+### Session exercise changes — 17 October 2026
+
+- Added overview actions to move exercises earlier/later or replace an unlogged exercise.
+  The phone sheet updates as changes save; the tablet overview uses the same controls.
+- Kept focus attached to the exercise entry while reordering. Completed sets, notes,
+  targets, movement identity and rest context survive moves. History follows session order.
+- Replacement starts with a fresh editor and entry ID, uses the selected movement's
+  completed history, and removes the replaced entry's unlogged suggestions. Old set actions
+  cannot attach to its replacement. The saved plan remains unchanged.
+- Logged exercises can move but cannot be replaced. To switch movements after logging,
+  add another exercise; existing logged work is retained. No new discard policy was introduced.
+- Changes share the session write queue and retained-state retry path. Real-file tests
+  verify replacement/order after restart and finish, including preserved completed totals.
+- Verification: 51 relevant BLoC, repository, editor and widget tests passed. Reviewed actual
+  Flutter renders in light/dark, compact large-text and tablet layouts. Native interaction,
+  screen-reader and iOS checks remain open.
+- Formatting and analysis of all seven Dart files changed in this slice passed; diff whitespace checks passed.
+- Next Phase 4 slice: a simple exercise-library picker to reuse saved custom movements
+  and their identity when adding/replacing exercises; keep manual entry available.
+
+### Reusable exercise picker — 17 October 2026
+
+- Added a shared picker for plan additions and session add/replace. One tap copies an
+  exercise into a fresh entry while preserving its movement identity, note, targets and rest settings.
+- Shows current/draft exercises and saved plan/library entries before the common catalog.
+  Deduplicates by identity, not name; independently created custom names stay separate.
+  Current setup takes precedence over saved setup, then catalog defaults.
+- Search finds names, setup notes and existing catalog aliases. Search stays responsive
+  while saved sources load. Partial failures retain usable sources and offer retry.
+- Manual creation remains available throughout; the search text carries into the editor.
+  Cancelling the editor returns to the picker with the query intact. Short keyboard layouts
+  scroll the full picker rather than squeezing fixed actions into the viewport.
+- The picker reads existing sources without writing a second exercise copy or changing
+  the source plan. Reused notes/targets remain entry-owned; edits do not propagate to other entries.
+  Session-only custom movements are not added to a permanent library by this slice.
+- Verification: 58 relevant tests passed; the large-text case passed again after shortening
+  the search label and simplifying the create action. Reviewed actual light/dark, large-text,
+  tablet, loading, empty and error renders. Native keyboard/VoiceOver/TalkBack and iOS checks remain.
+- Formatting and scoped analysis of all nine changed/new Dart files are clean; diff whitespace checks passed.
+- Next: review the remaining Phase 4 core-flow gaps and clarify skip/partial-workout behavior
+  before adding another feature slice. No starter plans, history charts or new record rules were added.
+
 ## Reliability backlog from the initial source review
 
-Recheck these paths before fixing them; findings below are not device reproductions.
+Current source-review disposition follows. Host-test evidence does not replace device acceptance.
 
-| Finding | Target phase |
+| Finding | Status / remaining work |
 | --- | --- |
-| Unawaited session updates and clear-then-add persistence can overlap | 3 |
-| Finish with no completed sets leaves the active cache behind | 3 |
-| Finish closes the screen before saving succeeds | 4 |
+| Unawaited session updates and clear-then-add persistence can overlap | Implemented: serialized session events, awaited writes and keyed cache saves; queue/retry tests pass |
+| Finish with no completed sets leaves the active cache behind | Implemented: empty finish clears the cache without history; covered by workout tests |
+| Finish closes the screen before saving succeeds | Implemented: completion follows history save and cleanup; failed finish remains recoverable |
 | Backup restore validation, path containment and rollback | Implemented in Phase 3; native interruption checks remain |
 | Restore refreshes app state and reminders | Implemented in Phase 3; native permission/delivery checks remain |
-| Exercise identity is scoped to plan entries, fragmenting progress | 3 |
-| Timers lack lifecycle reconciliation; stopwatch is not started | 4 |
+| Shared exercise identity across plans | Implemented for exact catalog matches and explicit identity reuse; ambiguous legacy history stays separate |
+| Timers lack lifecycle reconciliation; stopwatch is not started | Workout elapsed time and rest use wall-clock time; rest reconciliation is tested. Native background/audio behavior remains open |
 | Reminder offsets crossing midnight retain the wrong weekday | 5 |
-| Completing a workout cancels the recurring streak reminder | 5 |
-| Previous-best values can include unfinished sets; live/saved volume rules differ | 4 / 5 |
-| Only the template counter test exists; it does not initialize app dependencies | 3 |
+| Completing a workout cancels the recurring streak reminder | Old completion cancellation is no longer called; Phase 5 still needs completion-day suppression and recurring-delivery review |
+| Previous-best values can include unfinished sets; live/saved volume rules differ | Completed-set filtering implemented in history lookup, record comparison and volume; new record definitions remain Phase 5 |
+| Only the template counter test exists; it does not initialize app dependencies | Replaced with focused coverage; preceding full-suite run passed 99 tests, foundation review reran 43 |
 
 ## Verification baseline
 

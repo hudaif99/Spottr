@@ -176,6 +176,7 @@ void main() {
             endTime: now.add(const Duration(minutes: 45)),
             exerciseLogs: sets,
             exerciseNames: {'cable': 'Saved cable name'},
+            exerciseIdentities: {'cable': exercise.identityId},
           ),
         );
         await repository.saveActiveWorkout(
@@ -259,6 +260,8 @@ void main() {
           ],
         );
         expect(history.exerciseNames, {'cable': 'Saved cable name'});
+        expect(history.exerciseIdentities, {'cable': exercise.identityId});
+        expect(savedExercise.identityId, exercise.identityId);
         final logged = history.exerciseLogs['cable']!.single;
         expect(
           [
@@ -349,13 +352,41 @@ void main() {
         );
         final deadline = now.add(const Duration(seconds: 75));
         await apply(ChangeWorkoutRest(deadline), ready);
+        final extra = Exercise(id: 'extra', name: 'Leg press');
+        final replacement = Exercise(
+          id: 'replacement',
+          name: 'Dumbbell squat',
+          note: 'Keep heels down',
+        );
+        await apply(AddSessionExercise(extra), ready);
+        await apply(
+          ReplaceSessionExercise(
+            exerciseId: extra.id,
+            replacement: replacement,
+          ),
+          ready,
+        );
+        await apply(
+          MoveSessionExercise(exerciseId: replacement.id, offset: -1),
+          ready,
+        );
         await bloc.close();
         await reopen();
         bloc = WorkoutBloc(repository, null, () => now);
         await apply(ResumeWorkout(), ready);
         final resumed = bloc.state as WorkoutInProgress;
         expect(resumed.restUntil, deadline);
-        expect(resumed.day.exercises.single.note, exercise.note);
+        expect(resumed.day.exercises.map((exercise) => exercise.id), [
+          replacement.id,
+          exercise.id,
+        ]);
+        expect(resumed.day.exercises.first.note, replacement.note);
+        expect(resumed.day.exercises.last.note, exercise.note);
+        expect(resumed.exerciseLogs.containsKey(extra.id), isFalse);
+        expect(
+          (await repository.getPlans()).single.days.single.exercises.single.id,
+          exercise.id,
+        );
         expect(resumed.exerciseLogs['cable']!.first.weight, 15);
         await apply(FinishWorkout(), (state) => state is WorkoutInitial);
         await reopen();
@@ -363,6 +394,11 @@ void main() {
         final saved = (await repository.getWorkoutLogs()).single;
         expect(saved.totalVolume, 120);
         expect(saved.exerciseNames['cable'], exercise.name);
+        expect(saved.exerciseLogs.keys, [replacement.id, exercise.id]);
+        expect(
+          saved.exerciseIdentities[replacement.id],
+          replacement.identityId,
+        );
         expect(
           saved.exerciseLogs['cable']!.where((set) => set.isCompleted),
           hasLength(1),

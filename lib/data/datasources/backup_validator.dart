@@ -156,6 +156,7 @@ class BackupValidator {
   void _text(String value, {bool empty = true}) =>
       _require((empty || value.trim().isNotEmpty) && value.length <= 10000);
   void _exercise(Exercise value) {
+    if (value.identityId != null) _text(value.identityId!, empty: false);
     _text(value.id, empty: false);
     _text(value.name, empty: false);
     _text(value.note);
@@ -210,6 +211,9 @@ class BackupValidator {
         _sets(log.exerciseLogs);
         for (final name in log.exerciseNames.values) {
           _text(name);
+        }
+        for (final identity in log.exerciseIdentities.values) {
+          _text(identity, empty: false);
         }
       case 'active_workout_box':
         _require(value is ActiveWorkout);

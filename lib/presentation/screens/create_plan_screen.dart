@@ -9,6 +9,7 @@ import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
 import '../blocs/plans/plans_state.dart';
 import '../widgets/exercise_editor.dart';
+import '../widgets/exercise_picker.dart';
 import '../widgets/spottr_button.dart';
 
 class CreatePlanScreen extends StatefulWidget {
@@ -49,10 +50,15 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
   }
 
   Future<void> _exercise(int dayIndex, {int? index}) async {
-    final exercise = await showExerciseEditor(
-      context,
-      exercise: index == null ? null : _days[dayIndex].exercises[index],
-    );
+    final exercise = index == null
+        ? await showExercisePicker(
+            context,
+            localExercises: _days.expand((day) => day.exercises),
+          )
+        : await showExerciseEditor(
+            context,
+            exercise: _days[dayIndex].exercises[index],
+          );
     if (exercise == null || !mounted) return;
     setState(() {
       final exercises = [..._days[dayIndex].exercises];

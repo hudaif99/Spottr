@@ -74,6 +74,51 @@ class _ClassicActiveAdapter extends ActiveWorkoutAdapter {
   }
 }
 
+class _BeforeIdentityExerciseAdapter extends ExerciseAdapter {
+  @override
+  void write(BinaryWriter writer, Exercise value) {
+    final fields = [
+      value.id,
+      value.name,
+      value.targetSets,
+      value.targetReps,
+      value.targetWeight,
+      value.restDurationSeconds,
+      value.imageUrl,
+      value.note,
+      value.useDefaultRest,
+    ];
+    writer.writeByte(fields.length);
+    for (var index = 0; index < fields.length; index++) {
+      writer
+        ..writeByte(index)
+        ..write(fields[index]);
+    }
+  }
+}
+
+class _BeforeIdentityLogAdapter extends WorkoutLogAdapter {
+  @override
+  void write(BinaryWriter writer, WorkoutLog value) {
+    final fields = [
+      value.id,
+      value.planId,
+      value.dayId,
+      value.dayName,
+      value.startTime,
+      value.endTime,
+      value.exerciseLogs,
+      value.exerciseNames,
+    ];
+    writer.writeByte(fields.length);
+    for (var index = 0; index < fields.length; index++) {
+      writer
+        ..writeByte(index)
+        ..write(fields[index]);
+    }
+  }
+}
+
 void main() {
   test(
     'classic plans, history, and numeric-key session survive new fields and keyed saves',
@@ -148,6 +193,11 @@ void main() {
         '',
       );
       expect(database.getAllWorkoutLogs().single.exerciseNames, isEmpty);
+      expect(database.getAllWorkoutLogs().single.exerciseIdentities, isEmpty);
+      expect(
+        database.getAllPlans().single.days.single.exercises.single.identityId,
+        isNull,
+      );
       expect(database.getAllWorkoutLogs().single.totalVolume, 125);
       expect(database.getActiveWorkout()!.restUntil, isNull);
       final repository = WorkoutRepositoryImpl(database);
@@ -156,7 +206,12 @@ void main() {
       final mappedActive = repository.getActiveWorkout()!;
       expect(mappedPlan.days.single.exercises.single.note, '');
       expect(mappedPlan.days.single.exercises.single.useDefaultRest, isTrue);
+      expect(
+        mappedPlan.days.single.exercises.single.identityId,
+        'catalog:cable-kickback',
+      );
       expect(mappedLog.exerciseNames, isEmpty);
+      expect(mappedLog.exerciseIdentities, isEmpty);
       expect(mappedLog.totalVolume, 125);
       expect(mappedActive.exerciseLogs['exercise']!.single.id, 'set');
       await repository.savePlan(mappedPlan);
@@ -209,6 +264,58 @@ void main() {
       expect(database.getUserHeight(), isNull);
       expect(database.getUserWeight(), isNull);
       expect(database.getUserGender(), 'unspecified');
+      await Hive.close();
+      Hive.registerAdapter<Exercise>(
+        _BeforeIdentityExerciseAdapter(),
+        override: true,
+      );
+      Hive.registerAdapter<WorkoutLog>(
+        _BeforeIdentityLogAdapter(),
+        override: true,
+      );
+      await database.init(path: directory.path);
+      await database.savePlan(
+        Plan(
+          id: 'plan',
+          name: 'Before identity',
+          days: [
+            day.copyWith(
+              exercises: [
+                exercise.copyWith(
+                  note: 'Keep this setup cue',
+                  useDefaultRest: false,
+                  restDurationSeconds: 135,
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+      await database.saveWorkoutLog(
+        WorkoutLog(
+          id: 'old',
+          planId: 'plan',
+          dayId: day.id,
+          dayName: day.name,
+          startTime: date,
+          exerciseLogs: sets,
+          exerciseNames: {'exercise': 'Historical cable name'},
+        ),
+      );
+      await Hive.close();
+      Hive.registerAdapter<Exercise>(ExerciseAdapter(), override: true);
+      Hive.registerAdapter<WorkoutLog>(WorkoutLogAdapter(), override: true);
+      await database.init(path: directory.path);
+      final beforeIdentity =
+          (await repository.getPlans()).single.days.single.exercises.single;
+      expect(beforeIdentity.note, 'Keep this setup cue');
+      expect(beforeIdentity.useDefaultRest, isFalse);
+      expect(beforeIdentity.restDurationSeconds, 135);
+      expect(beforeIdentity.identityId, 'catalog:cable-kickback');
+      final oldLog = (await repository.getWorkoutLogs()).single;
+      expect(oldLog.exerciseNames['exercise'], 'Historical cable name');
+      expect(oldLog.exerciseIdentities, isEmpty);
+      expect(oldLog.totalVolume, 125);
     },
   );
 }

@@ -18,6 +18,7 @@ extension StoredExerciseMapping on Exercise {
     imageUrl: imageUrl,
     note: note,
     useDefaultRest: useDefaultRest,
+    identityId: identityId,
   );
 }
 
@@ -32,6 +33,7 @@ extension ExerciseStorageMapping on domain.Exercise {
     imageUrl: imageUrl,
     note: note,
     useDefaultRest: useDefaultRest,
+    identityId: identityId,
   );
 }
 
@@ -117,6 +119,7 @@ extension StoredLogMapping on WorkoutLog {
     endTime: endTime,
     exerciseLogs: _domainSets(exerciseLogs),
     exerciseNames: exerciseNames,
+    exerciseIdentities: exerciseIdentities,
   );
 }
 
@@ -130,6 +133,7 @@ extension LogStorageMapping on domain.WorkoutLog {
     endTime: endTime,
     exerciseLogs: _storedSets(exerciseLogs),
     exerciseNames: Map.of(exerciseNames),
+    exerciseIdentities: Map.of(exerciseIdentities),
   );
 }
 

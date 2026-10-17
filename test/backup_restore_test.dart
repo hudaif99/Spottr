@@ -73,6 +73,7 @@ void main() {
           ],
         },
         exerciseNames: {'exercise': 'Cable kickback'},
+        exerciseIdentities: {'exercise': exercise.identityId},
       ),
     );
     await database.saveProfile(name: 'Original name', height: 180, weight: 80);
@@ -134,6 +135,12 @@ void main() {
       expect(database.getThemeMode(), 'dark');
       expect(database.getRestTime(), 120);
       expect((await repository.getWorkoutLogs()).single.totalVolume, 100);
+      expect(
+        (await repository.getWorkoutLogs())
+            .single
+            .exerciseIdentities['exercise'],
+        exercise.identityId,
+      );
       expect(
         repository.getActiveWorkout()!.day.exercises.single.note,
         exercise.note,

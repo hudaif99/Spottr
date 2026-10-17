@@ -66,6 +66,7 @@ void main() {
     await tester.tap(find.text('Add exercise'));
     await tester.pumpAndSettle();
     expect(saved?.name, 'Lat pulldown');
+    expect(saved?.identityId, 'catalog:lat-pulldown');
     expect(tester.takeException(), isNull);
   });
 
@@ -82,6 +83,7 @@ void main() {
     await tester.tap(find.text('Add exercise'));
     await tester.pumpAndSettle();
     expect(saved?.name, 'My custom movement');
+    expect(saved?.identityId, startsWith('custom:'));
   });
 
   testWidgets('keeps edits through keyboard and compact landscape changes', (
@@ -126,6 +128,7 @@ void main() {
     await tester.tap(find.text('Save details'));
     await tester.pumpAndSettle();
     expect(saved?.id, original.id);
+    expect(saved?.identityId, original.identityId);
     expect(saved?.name, original.name);
     expect(saved?.imageUrl, original.imageUrl);
     expect(saved?.note, 'Pulley at knee level');

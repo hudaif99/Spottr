@@ -2,22 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../domain/models/exercise.dart';
 import '../../domain/exercise_name_suggestions.dart';
+import '../../domain/exercise_identity.dart';
 import 'spottr_button.dart';
 
 Future<Exercise?> showExerciseEditor(
   BuildContext context, {
   Exercise? exercise,
   bool lockName = false,
+  bool replacing = false,
+  String initialName = '',
 }) => showDialog<Exercise>(
   context: context,
   barrierDismissible: false,
-  builder: (_) => _ExerciseEditor(exercise: exercise, lockName: lockName),
+  builder: (_) => _ExerciseEditor(
+    exercise: exercise,
+    lockName: lockName,
+    replacing: replacing,
+    initialName: initialName,
+  ),
 );
 
 class _ExerciseEditor extends StatefulWidget {
   final Exercise? exercise;
   final bool lockName;
-  const _ExerciseEditor({this.exercise, required this.lockName});
+  final bool replacing;
+  final String initialName;
+  const _ExerciseEditor({
+    this.exercise,
+    required this.lockName,
+    required this.replacing,
+    required this.initialName,
+  });
   @override
   State<_ExerciseEditor> createState() => _ExerciseEditorState();
 }
@@ -25,7 +40,9 @@ class _ExerciseEditor extends StatefulWidget {
 class _ExerciseEditorState extends State<_ExerciseEditor> {
   final _form = GlobalKey<FormState>();
   final _nameFocus = FocusNode();
-  late final _name = TextEditingController(text: widget.exercise?.name ?? '');
+  late final _name = TextEditingController(
+    text: widget.exercise?.name ?? widget.initialName,
+  );
   late final _note = TextEditingController(text: widget.exercise?.note ?? '');
   late final _sets = TextEditingController(
     text: '${widget.exercise?.targetSets ?? 3}',
@@ -62,11 +79,18 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
       );
       return;
     }
+    final entryId = widget.exercise?.id ?? const Uuid().v4();
+    final name = _name.text.trim();
     Navigator.pop(
       context,
       Exercise(
-        id: widget.exercise?.id ?? const Uuid().v4(),
-        name: _name.text.trim(),
+        id: entryId,
+        name: name,
+        identityId: identityForExerciseEdit(
+          widget.exercise,
+          name,
+          'custom:${const Uuid().v4()}',
+        ),
         targetSets: int.parse(_sets.text.trim()),
         targetReps: int.parse(_reps.text.trim()),
         targetWeight: double.parse(_weight.text.trim()),
@@ -146,6 +170,13 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
   Widget _fields() => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
+      if (widget.replacing) ...[
+        Text(
+          'Replaces unlogged sets in this workout. Your plan stays unchanged.',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 20),
+      ],
       Autocomplete<String>(
         textEditingController: _name,
         focusNode: _nameFocus,
@@ -230,7 +261,9 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
               children: [
                 Expanded(
                   child: Text(
-                    widget.exercise == null
+                    widget.replacing
+                        ? 'Replace exercise'
+                        : widget.exercise == null
                         ? 'Add an exercise'
                         : 'Exercise details',
                     style: Theme.of(context).textTheme.titleLarge,
@@ -247,7 +280,11 @@ class _ExerciseEditorState extends State<_ExerciseEditor> {
           final footer = Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 16),
             child: SpottrButton(
-              text: widget.exercise == null ? 'Add exercise' : 'Save details',
+              text: widget.replacing
+                  ? 'Replace exercise'
+                  : widget.exercise == null
+                  ? 'Add exercise'
+                  : 'Save details',
               onPressed: _save,
             ),
           );

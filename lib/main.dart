@@ -16,6 +16,7 @@ import 'presentation/blocs/settings/settings_state.dart';
 import 'presentation/blocs/schedule/schedule_bloc.dart';
 import 'presentation/blocs/schedule/schedule_event.dart';
 import 'presentation/screens/splash_screen.dart';
+import 'domain/repositories/workout_repository.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -36,39 +37,48 @@ class SpottrApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (_) => di.sl<PlansBloc>()..add(LoadPlans())),
-        BlocProvider(create: (_) => di.sl<WorkoutBloc>()..add(ResumeWorkout())),
-        BlocProvider(create: (_) => di.sl<TimerBloc>()),
-        BlocProvider(create: (_) => di.sl<HistoryBloc>()..add(LoadHistory())),
-        BlocProvider(create: (_) => di.sl<SettingsBloc>()..add(LoadSettings())),
-        BlocProvider(create: (_) => di.sl<ScheduleBloc>()..add(LoadSchedule())),
-      ],
-      child: BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, settingsState) {
-          ThemeMode currentThemeMode;
-          switch (settingsState.themeMode) {
-            case 'light':
-              currentThemeMode = ThemeMode.light;
-              break;
-            case 'dark':
-              currentThemeMode = ThemeMode.dark;
-              break;
-            case 'system':
-            default:
-              currentThemeMode = ThemeMode.system;
-          }
+    return RepositoryProvider<WorkoutRepository>.value(
+      value: di.sl<WorkoutRepository>(),
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(create: (_) => di.sl<PlansBloc>()..add(LoadPlans())),
+          BlocProvider(
+            create: (_) => di.sl<WorkoutBloc>()..add(ResumeWorkout()),
+          ),
+          BlocProvider(create: (_) => di.sl<TimerBloc>()),
+          BlocProvider(create: (_) => di.sl<HistoryBloc>()..add(LoadHistory())),
+          BlocProvider(
+            create: (_) => di.sl<SettingsBloc>()..add(LoadSettings()),
+          ),
+          BlocProvider(
+            create: (_) => di.sl<ScheduleBloc>()..add(LoadSchedule()),
+          ),
+        ],
+        child: BlocBuilder<SettingsBloc, SettingsState>(
+          builder: (context, settingsState) {
+            ThemeMode currentThemeMode;
+            switch (settingsState.themeMode) {
+              case 'light':
+                currentThemeMode = ThemeMode.light;
+                break;
+              case 'dark':
+                currentThemeMode = ThemeMode.dark;
+                break;
+              case 'system':
+              default:
+                currentThemeMode = ThemeMode.system;
+            }
 
-          return MaterialApp(
-            title: 'Spottr',
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: currentThemeMode,
-            debugShowCheckedModeBanner: false,
-            home: const SplashScreen(),
-          );
-        },
+            return MaterialApp(
+              title: 'Spottr',
+              theme: AppTheme.lightTheme,
+              darkTheme: AppTheme.darkTheme,
+              themeMode: currentThemeMode,
+              debugShowCheckedModeBanner: false,
+              home: const SplashScreen(),
+            );
+          },
+        ),
       ),
     );
   }

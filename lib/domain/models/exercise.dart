@@ -1,5 +1,8 @@
+import '../exercise_catalog.dart';
+
 class Exercise {
   final String id;
+  final String identityId;
   final String name;
   final int targetSets;
   final int targetReps;
@@ -12,6 +15,7 @@ class Exercise {
   Exercise({
     required this.id,
     required this.name,
+    String? identityId,
     this.targetSets = 3,
     this.targetReps = 10,
     this.targetWeight,
@@ -19,11 +23,12 @@ class Exercise {
     this.imageUrl,
     this.note = '',
     this.useDefaultRest = true,
-  });
+  }) : identityId = identityId ?? catalogIdentityForName(name) ?? 'custom:$id';
 
   Exercise copyWith({
     String? id,
     String? name,
+    String? identityId,
     int? targetSets,
     int? targetReps,
     double? targetWeight,
@@ -35,6 +40,7 @@ class Exercise {
     return Exercise(
       id: id ?? this.id,
       name: name ?? this.name,
+      identityId: identityId ?? this.identityId,
       targetSets: targetSets ?? this.targetSets,
       targetReps: targetReps ?? this.targetReps,
       targetWeight: targetWeight ?? this.targetWeight,

@@ -93,11 +93,20 @@ Completed sets remain visible with undo. Suggested sets do not contribute to tot
 
 - Setup notes and targets belong to plan entries; active sessions copy those entries.
 - Session edits and added exercises affect that session. The plan editor makes permanent changes.
-- Suggestions use completed sets from the latest session with the same existing entry ID.
+- Suggestions use the latest completed matching exercise identity across plans; legacy same-entry fallback
+  remains when names do not contradict it. Old history is not merged by name; see [exercise-identity.md](exercise-identity.md).
 - All explicitly completed sets, including warm-ups, count toward volume. Suggestions do not.
 - New completed sessions save exercise names independently of future plan edits.
 - Active sessions save the rest deadline. Countdown and duration use wall clock time.
-- Shared catalog identity, replacement/reordering during sessions, and completed-session note snapshots remain for the next slice.
+- Shared identity and session replacement/reordering are implemented. The overview offers explicit move
+  actions and replacement before any sets are logged. Logged exercises can move; add another exercise
+  to switch movements without removing logged work. These changes affect only the session.
+- Replacement creates a fresh entry and suggestions rather than inheriting the old movement's note or
+  set values. The focused exercise stays selected when its position changes.
+- Plan additions and session add/replace can reuse movements from current/draft exercises,
+  saved plans and the existing exercise store. The picker preserves explicit custom identity,
+  copies entry setup and keeps manual creation available. Completed-session note snapshots
+  and a permanent library for session-only custom movements remain for later slices.
 - Phase 3 extracted storage-independent application models behind the repository boundary. Existing Hive
   models and adapters remain in the data layer; see [storage-boundary.md](storage-boundary.md).
 - Defer detailed timed/bodyweight and superset interactions until the basic flow is reviewed.

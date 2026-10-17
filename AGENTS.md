@@ -55,6 +55,7 @@
 - `spottr-classic` preserves the original app; do redesign work on `spottr-redesign`.
 - Do not include `codex` in branch names.
 - Keep commits small and use short, clear messages.
+- After finishing an important task, include a suggested commit message without waiting to be asked. Inspect the full changes since `HEAD` using the rules below; do not commit automatically.
 - When asked to generate a commit message, inspect all changes since the last commit (`HEAD`), including staged, unstaged, and relevant untracked files.
 - Return a short, simple message covering only the main tasks completed. Omit minor cleanup, formatting, and incidental changes unless they are the main task.
 - Base the message on the actual diff, not conversation history. Generating a message does not authorize committing.

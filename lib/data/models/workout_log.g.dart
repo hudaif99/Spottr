@@ -30,13 +30,16 @@ class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
       exerciseNames: fields[7] == null
           ? {}
           : (fields[7] as Map).cast<String, String>(),
+      exerciseIdentities: fields[8] == null
+          ? {}
+          : (fields[8] as Map).cast<String, String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, WorkoutLog obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -52,7 +55,9 @@ class WorkoutLogAdapter extends TypeAdapter<WorkoutLog> {
       ..writeByte(6)
       ..write(obj.exerciseLogs)
       ..writeByte(7)
-      ..write(obj.exerciseNames);
+      ..write(obj.exerciseNames)
+      ..writeByte(8)
+      ..write(obj.exerciseIdentities);
   }
 
   @override

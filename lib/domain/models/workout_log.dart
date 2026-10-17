@@ -10,6 +10,7 @@ class WorkoutLog {
 
   final Map<String, List<SetLog>> exerciseLogs;
   final Map<String, String> exerciseNames;
+  final Map<String, String> exerciseIdentities;
 
   WorkoutLog({
     required this.id,
@@ -20,8 +21,10 @@ class WorkoutLog {
     this.endTime,
     Map<String, List<SetLog>> exerciseLogs = const {},
     Map<String, String> exerciseNames = const {},
+    Map<String, String> exerciseIdentities = const {},
   }) : exerciseLogs = immutableSetLogs(exerciseLogs),
-       exerciseNames = Map.unmodifiable(exerciseNames);
+       exerciseNames = Map.unmodifiable(exerciseNames),
+       exerciseIdentities = Map.unmodifiable(exerciseIdentities);
 
   int get totalDurationInSeconds {
     if (endTime == null) return DateTime.now().difference(startTime).inSeconds;
@@ -49,6 +52,7 @@ class WorkoutLog {
     DateTime? endTime,
     Map<String, List<SetLog>>? exerciseLogs,
     Map<String, String>? exerciseNames,
+    Map<String, String>? exerciseIdentities,
   }) {
     return WorkoutLog(
       id: id ?? this.id,
@@ -59,6 +63,7 @@ class WorkoutLog {
       endTime: endTime ?? this.endTime,
       exerciseLogs: exerciseLogs ?? this.exerciseLogs,
       exerciseNames: exerciseNames ?? this.exerciseNames,
+      exerciseIdentities: exerciseIdentities ?? this.exerciseIdentities,
     );
   }
 }

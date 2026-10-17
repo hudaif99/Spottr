@@ -3,12 +3,14 @@ import 'package:spottr/domain/models/active_workout.dart';
 import 'package:spottr/domain/models/plan.dart';
 import 'package:spottr/domain/models/workout_log.dart';
 import 'package:spottr/domain/models/workout_schedule.dart';
+import 'package:spottr/domain/models/exercise.dart';
 import 'package:spottr/domain/repositories/workout_repository.dart';
 
 class FakeWorkoutRepository implements WorkoutRepository {
   ActiveWorkout? active;
   final logs = <WorkoutLog>[];
   final plans = <Plan>[];
+  final exercises = <Exercise>[];
   bool failSave = false;
   bool failClear = false;
   bool failHistory = false;
@@ -18,6 +20,8 @@ class FakeWorkoutRepository implements WorkoutRepository {
   Completer<void>? saveGate;
   Completer<void>? planSaveGate;
   int defaultRestTime = 90;
+  @override
+  Future<List<Exercise>> getExercises() async => [...exercises];
   @override
   int getDefaultRestTime() => defaultRestTime;
 
