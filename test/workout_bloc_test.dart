@@ -5,6 +5,7 @@ import 'package:spottr/domain/models/plan.dart';
 import 'package:spottr/domain/models/set_log.dart';
 import 'package:spottr/domain/models/workout_day.dart';
 import 'package:spottr/domain/models/workout_log.dart';
+import 'package:spottr/domain/models/workout_schedule.dart';
 import 'package:spottr/presentation/blocs/workout/workout_bloc.dart';
 import 'package:spottr/presentation/blocs/workout/workout_event.dart';
 import 'package:spottr/presentation/blocs/workout/workout_state.dart';
@@ -18,6 +19,25 @@ class _Achievements extends WorkoutReminderScheduler {
   @override
   Future<void> showPersonalRecordNotification(String detail) async {
     records++;
+  }
+
+  @override
+  Future<void> showMilestoneNotification(int totalWorkouts) async {}
+}
+
+class _ReminderUpdates extends WorkoutReminderScheduler {
+  final FakeWorkoutRepository repository;
+  final states = <String>[];
+  _ReminderUpdates(this.repository) : super(NotificationService());
+  @override
+  Future<void> rescheduleAll(WorkoutSchedule schedule) async {
+    states.add(
+      repository.active != null
+          ? 'active'
+          : repository.logs.isEmpty
+          ? 'inactive'
+          : 'saved',
+    );
   }
 
   @override
@@ -67,6 +87,36 @@ void main() {
       ),
     );
   }
+
+  test(
+    'start, cancel, empty finish and saved finish all refresh reminders after persistence',
+    () async {
+      await bloc.close();
+      repository.schedule = WorkoutSchedule(
+        workoutHour: 18,
+        workoutMinute: 0,
+        workoutDays: [1],
+      );
+      final scheduler = _ReminderUpdates(repository);
+      bloc = WorkoutBloc(repository, scheduler, () => now);
+      await start();
+      await settle(bloc, CancelWorkout());
+      await start();
+      await settle(bloc, FinishWorkout());
+      await start();
+      await complete();
+      await settle(bloc, FinishWorkout());
+      await Future<void>.delayed(Duration.zero);
+      expect(scheduler.states, [
+        'active',
+        'inactive',
+        'active',
+        'inactive',
+        'active',
+        'saved',
+      ]);
+    },
+  );
 
   test(
     'prefills only from completed sets and persists the setup note',

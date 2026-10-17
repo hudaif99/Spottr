@@ -17,6 +17,9 @@ The main action should be obvious, useful context visible, and repeated typing r
 - Android and iOS support with responsive small-phone and iPad layouts.
 - Purposeful animations, clean code, few dependencies, and focused tests.
 - Preserve the current app in Git and protect existing user data during migration.
+- Reminders use a user-approved 14-day dated window, refreshed when the app opens/resumes.
+  They expire if the app stays unopened past that window. Completed workouts suppress that
+  day's training nudges; future reminders remain available after refresh.
 
 ## Proposed first-release scope
 

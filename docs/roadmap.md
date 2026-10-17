@@ -15,7 +15,7 @@
 | 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Implementation reviewed; user/native-device sign-off pending |
 | 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Implementation review complete; native acceptance checks remain |
 | 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | Implementation review complete; native acceptance checks remain |
-| 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Session details implemented; remaining work planned |
+| 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Reminder scheduling implemented; progress insights remain |
 | 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Planned |
 
 Complete each phase with a concise review: what changed, what was verified, and what remains.
@@ -235,6 +235,24 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 - See [phase-4-review.md](phase-4-review.md) for the final behavior and remaining scope.
 - Phase 4 implementation review is complete. Next: Phase 5 reminder date and scheduling fixes.
 
+## Phase 5 completion
+
+### Dated reminder scheduling — 17 October 2026
+
+- The user approved a 14-day rolling window, including expiry when the app stays unopened.
+- Replaced recurring triggers with dated reminders, refreshed on launch/resume, schedule changes,
+  restore and workout start/finish/cancel. Settings includes a brief two-week reminder note.
+- Fixed midnight weekday offsets, calendar-day arithmetic across DST and current-zone refresh.
+- Completed/active sessions suppress the relevant dates without losing future reminders.
+  Cancellation and empty finish restore remaining prompts; unfinished suggestions do not suppress them.
+- Serialized native changes, read current saved preferences at execution time and retained deletion
+  on cancellation failure. Native/read failures remain retryable without undoing workout saves.
+- Verification: 72 relevant tests passed across focused runs. Android/iOS platform-channel payloads
+  are dated and non-repeating. Native delivery, reboot/permission behavior and iOS builds remain open.
+- The approved window, suppression rules, pending-request budget and limits are in
+  [reminder-scheduling.md](reminder-scheduling.md).
+- Next: define a small, useful exercise-progress view and personal-record rules before implementing charts.
+
 ## Reliability backlog from the initial source review
 
 Current source-review disposition follows. Host-test evidence does not replace device acceptance.
@@ -248,8 +266,8 @@ Current source-review disposition follows. Host-test evidence does not replace d
 | Restore refreshes app state and reminders | Implemented in Phase 3; native permission/delivery checks remain |
 | Shared exercise identity across plans | Implemented for exact catalog matches and explicit identity reuse; ambiguous legacy history stays separate |
 | Timers lack lifecycle reconciliation; stopwatch is not started | Workout elapsed time and rest use wall-clock time; rest reconciliation is tested. Native background/audio behavior remains open |
-| Reminder offsets crossing midnight retain the wrong weekday | 5 |
-| Completing a workout cancels the recurring streak reminder | Old completion cancellation is no longer called; Phase 5 still needs completion-day suppression and recurring-delivery review |
+| Reminder offsets crossing midnight retain the wrong weekday | Implemented in Phase 5 with dated calendar calculations; boundary/DST tests pass |
+| Completing a workout cancels the recurring streak reminder | Replaced with dated completion-day suppression; future dates remain scheduled inside the approved rolling window. Native delivery checks remain |
 | Previous-best values can include unfinished sets; live/saved volume rules differ | Completed-set filtering implemented in history lookup, record comparison and volume; new record definitions remain Phase 5 |
 | Only the template counter test exists; it does not initialize app dependencies | Replaced with focused coverage; preceding full-suite run passed 99 tests, foundation review reran 43 |
 

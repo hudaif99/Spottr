@@ -17,6 +17,7 @@ import 'presentation/blocs/schedule/schedule_bloc.dart';
 import 'presentation/blocs/schedule/schedule_event.dart';
 import 'presentation/screens/splash_screen.dart';
 import 'domain/repositories/workout_repository.dart';
+import 'presentation/widgets/reminder_lifecycle.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -51,33 +52,38 @@ class SpottrApp extends StatelessWidget {
             create: (_) => di.sl<SettingsBloc>()..add(LoadSettings()),
           ),
           BlocProvider(
-            create: (_) => di.sl<ScheduleBloc>()..add(LoadSchedule()),
+            lazy: false,
+            create: (_) =>
+                di.sl<ScheduleBloc>()
+                  ..add(LoadSchedule(refreshReminders: true)),
           ),
         ],
-        child: BlocBuilder<SettingsBloc, SettingsState>(
-          builder: (context, settingsState) {
-            ThemeMode currentThemeMode;
-            switch (settingsState.themeMode) {
-              case 'light':
-                currentThemeMode = ThemeMode.light;
-                break;
-              case 'dark':
-                currentThemeMode = ThemeMode.dark;
-                break;
-              case 'system':
-              default:
-                currentThemeMode = ThemeMode.system;
-            }
+        child: ReminderLifecycle(
+          child: BlocBuilder<SettingsBloc, SettingsState>(
+            builder: (context, settingsState) {
+              ThemeMode currentThemeMode;
+              switch (settingsState.themeMode) {
+                case 'light':
+                  currentThemeMode = ThemeMode.light;
+                  break;
+                case 'dark':
+                  currentThemeMode = ThemeMode.dark;
+                  break;
+                case 'system':
+                default:
+                  currentThemeMode = ThemeMode.system;
+              }
 
-            return MaterialApp(
-              title: 'Spottr',
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: currentThemeMode,
-              debugShowCheckedModeBanner: false,
-              home: const SplashScreen(),
-            );
-          },
+              return MaterialApp(
+                title: 'Spottr',
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: currentThemeMode,
+                debugShowCheckedModeBanner: false,
+                home: const SplashScreen(),
+              );
+            },
+          ),
         ),
       ),
     );

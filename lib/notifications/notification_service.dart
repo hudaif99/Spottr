@@ -1,4 +1,5 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
 
 /// Notification channel IDs – must match those declared in AndroidManifest.xml.
 class NotificationChannels {
@@ -131,6 +132,23 @@ class NotificationService {
 
   // public API
 
+  Future<void> schedule({
+    required int id,
+    required String title,
+    required String body,
+    required tz.TZDateTime date,
+    required String channelId,
+  }) => _plugin.zonedSchedule(
+    id,
+    title,
+    body,
+    date,
+    _buildDetails(channelId),
+    androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+    uiLocalNotificationDateInterpretation:
+        UILocalNotificationDateInterpretation.absoluteTime,
+  );
+
   /// Show an immediate notification.
   Future<void> showNow({
     required int id,
@@ -149,7 +167,7 @@ class NotificationService {
   /// Cancel all notifications within an inclusive ID range.
   Future<void> cancelRange(int min, int max) async {
     for (int id = min; id <= max; id++) {
-      await _plugin.cancel(id);
+      await cancel(id);
     }
   }
 
@@ -157,8 +175,4 @@ class NotificationService {
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }
-
-  /// Expose the plugin for [WorkoutReminderScheduler] to call zonedSchedule.
-  NotificationDetails detailsForChannel(String channelId) =>
-      _buildDetails(channelId);
 }

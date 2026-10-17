@@ -229,7 +229,7 @@ class _WorkoutScheduleSettingsScreenState
                         contentPadding: EdgeInsets.zero,
                         title: const Text('Workout reminders'),
                         subtitle: const Text(
-                          'Get reminders on your training days.',
+                          'Open Spottr every two weeks to keep reminders scheduled.',
                         ),
                         value: schedule.remindersEnabled,
                         onChanged: busy

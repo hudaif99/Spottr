@@ -24,8 +24,7 @@ Future<void> initDI() async {
   // ─── Timezone ──────────────────────────────────────────────────────────────
   // Must initialise before any zonedSchedule calls.
   tz.initializeTimeZones();
-  final localTz = await FlutterTimezone.getLocalTimezone();
-  tzlib.setLocalLocation(tzlib.getLocation(localTz.identifier));
+  await _refreshLocalTimeZone();
 
   // ─── Data sources ──────────────────────────────────────────────────────────
   final localDb = LocalDatabaseService();
@@ -46,7 +45,11 @@ Future<void> initDI() async {
   );
 
   sl.registerLazySingleton<WorkoutReminderScheduler>(
-    () => WorkoutReminderScheduler(sl()),
+    () => WorkoutReminderScheduler(
+      sl(),
+      workouts: sl<WorkoutRepository>(),
+      refreshTimeZone: _refreshLocalTimeZone,
+    ),
   );
 
   // ─── Repositories ──────────────────────────────────────────────────────────
@@ -65,4 +68,9 @@ Future<void> initDI() async {
   sl.registerFactory(() => HistoryBloc(sl()));
   sl.registerFactory(() => SettingsBloc(sl()));
   sl.registerFactory(() => ScheduleBloc(sl(), sl()));
+}
+
+Future<void> _refreshLocalTimeZone() async {
+  final localTz = await FlutterTimezone.getLocalTimezone();
+  tzlib.setLocalLocation(tzlib.getLocation(localTz.identifier));
 }

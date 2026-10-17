@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:spottr/presentation/widgets/reminder_lifecycle.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -344,6 +345,23 @@ void main() {
     });
   }
 
+  testWidgets('app resume refreshes the reminder window', (tester) async {
+    schedules.schedule = WorkoutSchedule(
+      workoutHour: 18,
+      workoutMinute: 0,
+      workoutDays: [1, 3, 5],
+    );
+    await mount(
+      tester,
+      const ReminderLifecycle(child: Scaffold(body: Text('Training'))),
+    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(reminderScheduler.refreshes, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('rest saving handles errors and waits for storage', (
     tester,
   ) async {
@@ -567,6 +585,11 @@ void main() {
           ios: suffix == 'tablet-dark',
         );
         await capture(tester, 'schedule-$suffix');
+        await tester.ensureVisible(
+          find.text('Open Spottr every two weeks to keep reminders scheduled.'),
+        );
+        await tester.pumpAndSettle();
+        await capture(tester, 'schedule-reminder-note-$suffix');
         await tap(tester, find.text('Training days'));
         await tap(tester, find.widgetWithText(FilterChip, 'Tue'));
         await capture(tester, 'schedule-days-$suffix');

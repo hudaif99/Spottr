@@ -22,6 +22,7 @@ class FakeWorkoutRepository implements WorkoutRepository {
   Completer<void>? saveGate;
   Completer<void>? planSaveGate;
   int defaultRestTime = 90;
+  WorkoutSchedule? schedule;
   @override
   Future<List<Exercise>> getExercises() async => [...exercises];
   @override
@@ -69,7 +70,7 @@ class FakeWorkoutRepository implements WorkoutRepository {
   }
 
   @override
-  Future<WorkoutSchedule?> getScheduleForToday() async => null;
+  Future<WorkoutSchedule?> getScheduleForToday() async => schedule;
   @override
   Future<List<Plan>> getPlans() async => [...plans];
   @override

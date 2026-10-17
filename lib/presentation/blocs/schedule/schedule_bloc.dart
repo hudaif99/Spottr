@@ -40,7 +40,7 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
           } catch (_) {
             emit(
               ScheduleError(
-                'Data restored, but reminders could not update. Retry.',
+                'Reminders could not update. Retry.',
                 schedule: schedule,
                 retrySchedule: schedule,
               ),
@@ -63,15 +63,22 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
     final current = _schedule;
     if (event is DeleteSchedule) {
       emit(ScheduleSaving(current));
+      var deleted = false;
       try {
+        await _repo.deleteSchedule();
+        deleted = true;
         await _scheduler.cancelWorkoutReminders();
         await _scheduler.cancelStreakReminder();
         await _scheduler.cancelWeeklySummary();
-        await _repo.deleteSchedule();
         emit(const ScheduleLoaded(null));
       } catch (_) {
         emit(
-          ScheduleError('Could not delete your schedule.', schedule: current),
+          ScheduleError(
+            deleted
+                ? 'Schedule removed, but reminders could not clear. Retry.'
+                : 'Could not delete your schedule.',
+            schedule: deleted ? null : current,
+          ),
         );
       }
       return;

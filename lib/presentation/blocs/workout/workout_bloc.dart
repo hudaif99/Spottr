@@ -214,8 +214,8 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
         await _repository.clearActiveWorkout();
         emit(event is FinishWorkout ? WorkoutCompleted() : WorkoutInitial());
         emit(WorkoutInitial());
+        await _updateReminders();
         if (saved) {
-          await _updateReminders();
           await _notifyAchievements(current.workoutLogId);
         }
       } catch (_) {
@@ -478,7 +478,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     try {
       final schedule = await _repository.getScheduleForToday();
       if (schedule != null) {
-        await scheduler.cancelAndRescheduleTodaysMissedWorkout(schedule);
+        await scheduler.rescheduleAll(schedule);
       }
     } catch (_) {
       /* Reminders must not block logging. */
