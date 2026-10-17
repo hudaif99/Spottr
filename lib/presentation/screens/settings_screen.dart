@@ -1,539 +1,321 @@
-import 'package:spottr/core/theme/app_colors_extension.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import '../widgets/spottr_button.dart';
-import '../widgets/spottr_card.dart';
 import '../../data/datasources/local_database_service.dart';
 import '../../data/datasources/backup_restore_service.dart';
-import 'profile_appearance_screen.dart';
-import 'workout_preferences_screen.dart';
-import 'workout_schedule_settings_screen.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
 import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_event.dart';
+import '../widgets/spottr_button.dart';
+import 'profile_appearance_screen.dart';
+import 'workout_preferences_screen.dart';
+import 'workout_schedule_settings_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
-
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _isLoading = false;
-  int _restTime = 90;
+  bool _busy = false;
+  late int _restTime = GetIt.I<LocalDatabaseService>().getRestTime();
 
-  @override
-  void initState() {
-    super.initState();
-    _restTime = GetIt.I<LocalDatabaseService>().getRestTime();
+  void _message(String text) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(text)));
   }
 
+  Future<void> _chooseRest() async {
+    final seconds = await showModalBottomSheet<int>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (_) => _RestTimeSheet(seconds: _restTime),
+    );
+    if (seconds == null || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      await GetIt.I<LocalDatabaseService>().saveRestTime(seconds);
+      if (mounted) setState(() => _restTime = seconds);
+    } catch (_) {
+      _message('Could not save rest time. Try again.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _backup(bool restore) async {
+    setState(() => _busy = true);
+    try {
+      final service = GetIt.I<BackupRestoreService>();
+      final error = restore
+          ? await service.importData()
+          : await service.exportData();
+      if (!mounted) return;
+      if (error != null) {
+        _message(error);
+      } else {
+        if (restore) {
+          context.read<PlansBloc>().add(LoadPlans());
+          context.read<HistoryBloc>().add(LoadHistory());
+        }
+        _message(restore ? 'Backup restored.' : 'Backup exported.');
+      }
+    } catch (_) {
+      _message(
+        restore
+            ? 'Could not restore backup. Try again.'
+            : 'Could not export backup. Try again.',
+      );
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showBackup() => showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (sheetContext) => SingleChildScrollView(
+      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Backup and restore',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Export a copy of your workout data, or restore an existing backup.',
+          ),
+          const SizedBox(height: 24),
+          SpottrButton(
+            text: 'Export backup',
+            onPressed: () {
+              Navigator.pop(sheetContext);
+              _backup(false);
+            },
+          ),
+          const SizedBox(height: 12),
+          SpottrButton(
+            text: 'Restore backup',
+            variant: SpottrButtonVariant.outline,
+            onPressed: () {
+              Navigator.pop(sheetContext);
+              _backup(true);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+
+  Widget _section(String title) => Padding(
+    padding: const EdgeInsets.fromLTRB(8, 24, 8, 8),
+    child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+  );
+
+  Widget _row(
+    IconData icon,
+    String title,
+    String subtitle,
+    VoidCallback onTap,
+  ) => ListTile(
+    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+    leading: Icon(icon),
+    title: Text(title),
+    subtitle: Text(subtitle),
+    trailing: const Icon(Icons.chevron_right_rounded),
+    onTap: onTap,
+  );
+
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_busy,
+    child: Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: Stack(
         children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── Workout Schedule ─────────────────────────────────────
-                Text(
-                  'Workout Schedule',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: context.colors.secondaryText,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SpottrCard(
-                  padding: const EdgeInsets.all(16),
-                  child: _buildSettingRow(
-                    context,
-                    Icons.schedule_outlined,
-                    'Workout Schedule',
-                    onTap: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const WorkoutScheduleSettingsScreen(),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                SpottrCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildSettingRow(
-                        context,
-                        Icons.person_outline,
-                        'Profile & Appearance',
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const ProfileAppearanceScreen(),
-                          ),
-                        ),
-                      ),
-                      const Divider(),
-                      _buildSettingRow(
-                        context,
-                        Icons.fitness_center,
-                        'Workout Preferences',
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const WorkoutPreferencesScreen(),
-                          ),
-                        ),
-                      ),
-                      const Divider(),
-                      _buildSettingRow(
-                        context,
-                        Icons.timer_outlined,
-                        'Rest Time',
-                        value: '${_restTime}s',
-                        onTap: () => _showRestTimePickerBottomSheet(context),
-                      ),
-                      const Divider(),
-                      _buildSettingRow(
-                        context,
-                        Icons.storage_outlined,
-                        'Backup & Restore Data',
-                        onTap: () => _showBackupRestoreBottomSheet(context),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Center(
-                  child: Column(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.asset(
-                          'assets/ic/spottr_icon.png',
-                          width: 64,
-                          height: 64,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Spottr v1.0.0',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: context.colors.secondaryText,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Crafted by Hudaif',
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: context.colors.primaryAccent,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (_isLoading)
-            Container(
-              color: Colors.black54,
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
-      ),
-    );
-  }
-
-  void _showRestTimePickerBottomSheet(BuildContext context) {
-    final List<int> options = [30, 45, 60, 90, 120, 150, 180];
-
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (BuildContext sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Container(
-              decoration: BoxDecoration(
-                color: context.colors.background,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
-                ),
-              ),
-              padding: EdgeInsets.fromLTRB(
-                24.0,
-                24.0,
-                24.0,
-                MediaQuery.of(context).viewInsets.bottom + 24.0,
-              ),
-              child: SafeArea(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          SafeArea(
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 640),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                   children: [
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: context.colors.divider,
-                          borderRadius: BorderRadius.circular(2),
+                    _section('Training'),
+                    _row(
+                      Icons.calendar_today_outlined,
+                      'Workout schedule',
+                      'Training days and reminders',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WorkoutScheduleSettingsScreen(),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Default Rest Time',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                    const Divider(),
+                    _row(
+                      Icons.timer_outlined,
+                      'Default rest time',
+                      '$_restTime seconds between sets',
+                      _chooseRest,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Choose the automatic countdown duration between your sets.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: context.colors.secondaryText,
-                        height: 1.5,
+                    const Divider(),
+                    _row(
+                      Icons.tune_rounded,
+                      'Workout preferences',
+                      'Screen awake and timer sound',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const WorkoutPreferencesScreen(),
+                        ),
                       ),
+                    ),
+                    _section('Personal'),
+                    _row(
+                      Icons.palette_outlined,
+                      'Profile and appearance',
+                      'Your details and theme',
+                      () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileAppearanceScreen(),
+                        ),
+                      ),
+                    ),
+                    _section('Your data'),
+                    _row(
+                      Icons.backup_outlined,
+                      'Backup and restore',
+                      'Keep a copy of your workouts',
+                      _showBackup,
                     ),
                     const SizedBox(height: 32),
-                    Wrap(
-                      spacing: 12.0,
-                      runSpacing: 12.0,
-                      children: [
-                        ...options.map((int seconds) {
-                          final bool isSelected = _restTime == seconds;
-                          final String label = seconds >= 60
-                              ? (seconds % 60 == 0
-                                    ? '${seconds ~/ 60}m'
-                                    : '${seconds ~/ 60}m ${seconds % 60}s')
-                              : '${seconds}s';
-
-                          return ChoiceChip(
-                            label: Text(label),
-                            selected: isSelected,
-                            selectedColor: context.colors.primaryAccent,
-                            backgroundColor: context.colors.surface,
-                            labelStyle: TextStyle(
-                              color: isSelected
-                                  ? Colors.black
-                                  : context.colors.primaryText,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
-                            onSelected: (bool selected) async {
-                              if (selected) {
-                                setModalState(() => _restTime = seconds);
-                                setState(() => _restTime = seconds);
-                                await GetIt.I<LocalDatabaseService>()
-                                    .saveRestTime(seconds);
-                                if (context.mounted) {
-                                  Navigator.of(sheetContext).pop();
-                                }
-                              }
-                            },
-                          );
-                        }),
-                        Builder(
-                          builder: (context) {
-                            final bool isCustomSelected = !options.contains(
-                              _restTime,
-                            );
-                            final String label = isCustomSelected
-                                ? 'Custom (${_restTime}s)'
-                                : 'Custom';
-                            return ChoiceChip(
-                              label: Text(label),
-                              selected: isCustomSelected,
-                              selectedColor: context.colors.primaryAccent,
-                              backgroundColor: context.colors.surface,
-                              labelStyle: TextStyle(
-                                color: isCustomSelected
-                                    ? Colors.black
-                                    : context.colors.primaryText,
-                                fontWeight: isCustomSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                              ),
-                              onSelected: (bool selected) async {
-                                await showCupertinoModalPopup<int>(
-                                  context: context,
-                                  builder: (BuildContext popupContext) {
-                                    Duration tempDuration = Duration(
-                                      seconds: isCustomSelected ? _restTime : 0,
-                                    );
-                                    return Container(
-                                      height: 300,
-                                      color: context.colors.background,
-                                      child: SafeArea(
-                                        top: false,
-                                        child: Column(
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment:
-                                                  MainAxisAlignment
-                                                      .spaceBetween,
-                                              children: [
-                                                CupertinoButton(
-                                                  child: Text(
-                                                    'Cancel',
-                                                    style: TextStyle(
-                                                      color: context
-                                                          .colors
-                                                          .secondaryText,
-                                                    ),
-                                                  ),
-                                                  onPressed: () => Navigator.of(
-                                                    popupContext,
-                                                  ).pop(),
-                                                ),
-                                                CupertinoButton(
-                                                  child: Text(
-                                                    'Set',
-                                                    style: TextStyle(
-                                                      color: context
-                                                          .colors
-                                                          .primaryAccent,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  onPressed: () {
-                                                    Navigator.of(
-                                                      popupContext,
-                                                    ).pop(
-                                                      tempDuration.inSeconds,
-                                                    );
-                                                  },
-                                                ),
-                                              ],
-                                            ),
-                                            Expanded(
-                                              child: CupertinoTheme(
-                                                data: CupertinoThemeData(
-                                                  brightness: Theme.of(
-                                                    context,
-                                                  ).brightness,
-                                                  textTheme:
-                                                      CupertinoTextThemeData(
-                                                        pickerTextStyle:
-                                                            TextStyle(
-                                                              color: context
-                                                                  .colors
-                                                                  .primaryText,
-                                                              fontSize: 22,
-                                                            ),
-                                                      ),
-                                                ),
-                                                child: CupertinoTimerPicker(
-                                                  mode: CupertinoTimerPickerMode
-                                                      .ms,
-                                                  initialTimerDuration:
-                                                      tempDuration,
-                                                  onTimerDurationChanged:
-                                                      (Duration newDuration) {
-                                                        tempDuration =
-                                                            newDuration;
-                                                      },
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ).then((customValue) async {
-                                  if (customValue != null && customValue > 0) {
-                                    setModalState(
-                                      () => _restTime = customValue,
-                                    );
-                                    setState(() => _restTime = customValue);
-                                    await GetIt.I<LocalDatabaseService>()
-                                        .saveRestTime(customValue);
-                                    if (context.mounted) {
-                                      Navigator.of(sheetContext).pop();
-                                    }
-                                  }
-                                });
-                              },
-                            );
-                          },
-                        ),
-                      ],
+                    Text(
+                      'Spottr · Crafted by Hudaif',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _showBackupRestoreBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (BuildContext sheetContext) {
-        return Container(
-          decoration: BoxDecoration(
-            color: context.colors.background,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          padding: const EdgeInsets.all(24.0),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: context.colors.divider,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Backup & Restore',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Export your workout data to keep it safe, or restore it to a new device.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: context.colors.secondaryText,
-                    height: 1.5,
-                  ),
-                ),
-                const SizedBox(height: 32),
-                SpottrButton(
-                  text: 'Export Backup (.zip)',
-                  icon: Icon(
-                    Icons.upload_file,
-                    color: context.colors.background,
-                  ),
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    _handleExport(context);
-                  },
-                ),
-                const SizedBox(height: 16),
-                SpottrButton(
-                  text: 'Restore from Backup',
-                  variant: SpottrButtonVariant.outline,
-                  icon: Icon(Icons.restore, color: context.colors.primaryText),
-                  onPressed: () {
-                    Navigator.of(sheetContext).pop();
-                    _handleImport(context);
-                  },
-                ),
-              ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Future<void> _handleExport(BuildContext context) async {
-    setState(() => _isLoading = true);
-    final error = await GetIt.I<BackupRestoreService>().exportData();
-    setState(() => _isLoading = false);
-
-    if (context.mounted) {
-      if (error != null) {
-        _showSnackBar(context, error, true);
-      } else {
-        _showSnackBar(context, 'Backup extracted successfully!', false);
-      }
-    }
-  }
-
-  Future<void> _handleImport(BuildContext context) async {
-    setState(() => _isLoading = true);
-    final error = await GetIt.I<BackupRestoreService>().importData();
-    setState(() => _isLoading = false);
-
-    if (context.mounted) {
-      if (error != null) {
-        _showSnackBar(context, error, true);
-      } else {
-        // Refresh entire app state from the newly imported database
-        context.read<PlansBloc>().add(LoadPlans());
-        context.read<HistoryBloc>().add(LoadHistory());
-        _showSnackBar(
-          context,
-          'Data restored completely! Pull down to refresh if needed.',
-          false,
-        );
-      }
-    }
-  }
-
-  void _showSnackBar(BuildContext context, String message, bool isError) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: const TextStyle(color: Colors.white)),
-        backgroundColor: isError
-            ? context.colors.error
-            : context.colors.success,
-        duration: const Duration(seconds: 4),
+          if (_busy) ...[
+            const ModalBarrier(dismissible: false, color: Colors.black26),
+            const Center(
+              child: CircularProgressIndicator(
+                semanticsLabel: 'Saving settings',
+              ),
+            ),
+          ],
+        ],
       ),
-    );
+    ),
+  );
+}
+
+class _RestTimeSheet extends StatefulWidget {
+  final int seconds;
+  const _RestTimeSheet({required this.seconds});
+  @override
+  State<_RestTimeSheet> createState() => _RestTimeSheetState();
+}
+
+class _RestTimeSheetState extends State<_RestTimeSheet> {
+  static const _options = [30, 45, 60, 90, 120, 150, 180];
+  final _form = GlobalKey<FormState>();
+  late final _controller = TextEditingController(text: '${widget.seconds}');
+  late bool _custom = !_options.contains(widget.seconds);
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
-  Widget _buildSettingRow(
-    BuildContext context,
-    IconData icon,
-    String title, {
-    String? value,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  @override
+  Widget build(BuildContext context) => SingleChildScrollView(
+    padding: EdgeInsets.fromLTRB(
+      24,
+      0,
+      24,
+      MediaQuery.viewInsetsOf(context).bottom + 24,
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
           children: [
-            Row(
-              children: [
-                Icon(icon, color: context.colors.primaryText),
-                const SizedBox(width: 16),
-                Text(title, style: Theme.of(context).textTheme.bodyLarge),
-              ],
+            Expanded(
+              child: Text(
+                'Default rest time',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
-            if (value != null)
-              Text(
-                value,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: context.colors.primaryAccent,
-                ),
-              )
-            else
-              Icon(Icons.chevron_right, color: context.colors.secondaryText),
+            IconButton(
+              tooltip: 'Close rest settings',
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.close_rounded),
+            ),
           ],
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 8),
+        const Text('Used unless an exercise has its own rest time.'),
+        const SizedBox(height: 20),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final seconds in _options)
+              ChoiceChip(
+                label: Text('$seconds s'),
+                selected: !_custom && widget.seconds == seconds,
+                onSelected: (_) => Navigator.pop(context, seconds),
+              ),
+            ChoiceChip(
+              label: const Text('Custom'),
+              selected: _custom,
+              onSelected: (_) => setState(() => _custom = true),
+            ),
+          ],
+        ),
+        if (_custom) ...[
+          const SizedBox(height: 20),
+          Form(
+            key: _form,
+            child: TextFormField(
+              controller: _controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Rest · seconds'),
+              validator: (value) {
+                final seconds = int.tryParse(value?.trim() ?? '');
+                return seconds == null || seconds < 1 || seconds > 3599
+                    ? 'Use 1–3599 seconds'
+                    : null;
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
+          SpottrButton(
+            text: 'Save rest time',
+            onPressed: () {
+              if (_form.currentState!.validate()) {
+                Navigator.pop(context, int.parse(_controller.text.trim()));
+              }
+            },
+          ),
+        ],
+      ],
+    ),
+  );
 }

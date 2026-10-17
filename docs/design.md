@@ -12,38 +12,37 @@ Flutter screens rather than more generated concepts.
 Phase 2 began on 17 October 2026. Implemented tighter workout hierarchy and spacing,
 shorter previous-set context with a details sheet, clearer set status, quieter Today
 headings and brief completion-check feedback that respects reduced motion.
-Keyboard-friendly exercise editing, consistent secondary screens and broader motion
-remain future polish. Native device and screen-reader review remain required.
+The shared exercise editor now keeps its primary action outside the scrolling form
+when height permits, preserves input across keyboard/width changes, and places optional
+rest customization behind an explicit action. Targets share a row on wide screens and
+stack for large text. Tiny landscape/keyboard layouts scroll the whole editor.
+Settings now uses open, grouped rows with constrained tablet width. Workout preferences
+use adaptive switches. Onboarding uses the same typography/actions, scrollable steps,
+clear progress/back controls and brief transitions that respect reduced motion.
+Profile uses wrapping theme choices, optional validated details and a persistent save action.
+Schedule details use open rows, accessible day selection, adaptive time pickers and visible retry
+feedback. Both constrain content on tablets and scroll at large text sizes. Broader motion remains.
+Native device and screen-reader review remain required.
 
-### Stitch directions — rejected history
+Progress uses a compact all-time summary and month-grouped session rows with a clear date
+column. Large text switches metrics to compact inline values. Workout details preserve saved
+exercise names, original set positions and logged-set types. Empty and load-error states explain
+the next step without placeholder metrics. Trends and personal-record design remain later work.
 
-The user provisionally accepted **Spottr · Reference-led Workout** on 12 October
-2026 and requested a focused cleanup. This is the current working light anchor;
-see the [image-reference pass](stitch-image-reference-pass.md) for the refinements.
-The previous light/dark pair remains rejected. Dark mode and the connected screens
-still need review before Flutter implementation. Exact tokens remain revisable.
+### Rejected design history
 
-The user agreed on 12 October 2026 to combine the healthcare reference's soft
-composition and rounded forms with the nutrition reference's warmth and accent
-treatment. All earlier generated concepts were rejected.
-
-[DESIGN.md](../DESIGN.md) is the current shared specification, with
-[semantic tokens](design-tokens.json) and the
-[first reference-informed workout prompt](stitch-reference-workout-prompt.md).
-The direction is agreed; the [previous pair](stitch-light-dark-review.md) is a
-historical rejected exploration. Both themes must be designed before
-Flutter implementation, with deliberate dark surface/contrast choices. Flutter
-code remains on the earlier implementation theme until a slice is authorized.
+All Stitch directions were rejected on 13 October 2026. Their provisional approvals,
+Inter/coral tokens and reference prompts are historical only. They do not authorize UI changes.
+See [DESIGN.md](../DESIGN.md), [the reference pass](stitch-image-reference-pass.md) and
+[the final retry](stitch-clean-training-review.md) for that exploration history.
 
 ## Direction
 
-Soft cool-gray backgrounds, white rounded surfaces, crisp dark Inter typography,
-coral primary actions with readable ink labels, and quiet sage completion feedback.
-Use controlled neutral elevation on the main logging panel, open exercise context,
-and quieter completed rows. Dark mode mirrors hierarchy using charcoal surfaces.
-These tokens are proposed adaptations, not measurements extracted from Behance.
-The references' photographs, tilted hardware, lighting and promotional presentation
-do not belong in the logging UI. Keep source attribution in DESIGN.md.
+Keep the implemented mineral/off-white background, forest actions and restrained clay accents
+in light mode, with deep green surfaces and sage emphasis in dark mode. Use bundled Outfit.
+The Flutter theme and the current specification above are the active design authority.
+Use open rows for preferences and history; reserve surfaces for meaningful groups such as a
+routine or totals. Give logging controls priority over headings or decorative content.
 
 ## Design authorship
 

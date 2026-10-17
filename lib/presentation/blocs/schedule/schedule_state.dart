@@ -10,6 +10,13 @@ abstract class ScheduleState extends Equatable {
 /// Initial state before loading.
 class ScheduleInitial extends ScheduleState {}
 
+class ScheduleSaving extends ScheduleState {
+  final WorkoutSchedule? schedule;
+  const ScheduleSaving([this.schedule]);
+  @override
+  List<Object?> get props => [schedule];
+}
+
 /// Schedule successfully loaded (or absent — schedule is null when not set up).
 class ScheduleLoaded extends ScheduleState {
   final WorkoutSchedule? schedule;
@@ -22,8 +29,10 @@ class ScheduleLoaded extends ScheduleState {
 /// An error occurred during load or save.
 class ScheduleError extends ScheduleState {
   final String message;
-  const ScheduleError(this.message);
+  final WorkoutSchedule? schedule;
+  final WorkoutSchedule? retrySchedule;
+  const ScheduleError(this.message, {this.schedule, this.retrySchedule});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, schedule, retrySchedule];
 }

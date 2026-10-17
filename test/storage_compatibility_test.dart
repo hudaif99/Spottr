@@ -172,6 +172,25 @@ void main() {
       await database.clearActiveWorkout();
       expect(database.getActiveWorkout(), isNull);
       expect(database.getAllWorkoutLogs().length, 1);
+      await database.saveUserGender('unspecified');
+      await database.saveProfile(
+        name: 'Alex',
+        age: 30,
+        height: 180,
+        weight: 80,
+      );
+      await Hive.close();
+      await database.init(path: directory.path);
+      expect(database.getUserName(), 'Alex');
+      expect(database.getUserHeight(), 180);
+      await database.saveProfile();
+      await Hive.close();
+      await database.init(path: directory.path);
+      expect(database.getUserName(), isNull);
+      expect(database.getUserAge(), isNull);
+      expect(database.getUserHeight(), isNull);
+      expect(database.getUserWeight(), isNull);
+      expect(database.getUserGender(), 'unspecified');
     },
   );
 }

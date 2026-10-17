@@ -7,79 +7,69 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   final LocalDatabaseService _localDbService;
 
   SettingsBloc(this._localDbService) : super(const SettingsState()) {
-    on<LoadSettings>(_onLoadSettings);
-    on<UpdateProfile>(_onUpdateProfile);
-    on<UpdateThemeMode>(_onUpdateThemeMode);
-    on<UpdateKeepScreenAwake>(_onUpdateKeepScreenAwake);
-    on<UpdatePlayTimerSound>(_onUpdatePlayTimerSound);
-  }
-
-  Future<void> _onLoadSettings(
-    LoadSettings event,
-    Emitter<SettingsState> emit,
-  ) async {
-    emit(
-      state.copyWith(
-        userName: _localDbService.getUserName(),
-        userAge: _localDbService.getUserAge(),
-        userGender: _localDbService.getUserGender(),
-        userHeight: _localDbService.getUserHeight(),
-        userWeight: _localDbService.getUserWeight(),
-        themeMode: _localDbService.getThemeMode(),
-        keepScreenAwake: _localDbService.getKeepScreenAwake(),
-        playTimerSound: _localDbService.getPlayTimerSound(),
-      ),
+    on<SettingsEvent>(
+      _handle,
+      transformer: (events, mapper) => events.asyncExpand(mapper),
     );
   }
 
-  Future<void> _onUpdateProfile(
-    UpdateProfile event,
-    Emitter<SettingsState> emit,
-  ) async {
-    if (event.name != null) await _localDbService.saveUserName(event.name!);
-    if (event.age != null) await _localDbService.saveUserAge(event.age!);
-    if (event.gender != null) {
-      await _localDbService.saveUserGender(event.gender!);
+  Future<void> _handle(SettingsEvent event, Emitter<SettingsState> emit) async {
+    try {
+      if (event is LoadSettings) {
+        emit(
+          state.copyWith(
+            userName: _localDbService.getUserName(),
+            userAge: _localDbService.getUserAge(),
+            userGender: _localDbService.getUserGender(),
+            userHeight: _localDbService.getUserHeight(),
+            userWeight: _localDbService.getUserWeight(),
+            themeMode: _localDbService.getThemeMode(),
+            keepScreenAwake: _localDbService.getKeepScreenAwake(),
+            playTimerSound: _localDbService.getPlayTimerSound(),
+            replaceProfile: true,
+            isSaving: false,
+          ),
+        );
+        return;
+      }
+      emit(state.copyWith(isSaving: true));
+      if (event is UpdateProfile) {
+        await _localDbService.saveProfile(
+          name: event.name,
+          age: event.age,
+          gender: event.gender,
+          height: event.height,
+          weight: event.weight,
+        );
+        emit(
+          state.copyWith(
+            userName: event.name,
+            userAge: event.age,
+            userGender: event.gender,
+            userHeight: event.height,
+            userWeight: event.weight,
+            replaceProfile: true,
+            profileRevision: state.profileRevision + 1,
+            isSaving: false,
+          ),
+        );
+      } else if (event is UpdateThemeMode) {
+        await _localDbService.saveThemeMode(event.mode);
+        emit(state.copyWith(themeMode: event.mode, isSaving: false));
+      } else if (event is UpdateKeepScreenAwake) {
+        await _localDbService.saveKeepScreenAwake(event.keepAwake);
+        emit(state.copyWith(keepScreenAwake: event.keepAwake, isSaving: false));
+      } else if (event is UpdatePlayTimerSound) {
+        await _localDbService.savePlayTimerSound(event.playSound);
+        emit(state.copyWith(playTimerSound: event.playSound, isSaving: false));
+      }
+    } catch (_) {
+      emit(
+        state.copyWith(
+          isSaving: false,
+          errorMessage: 'Could not save your changes. Try again.',
+        ),
+      );
     }
-    if (event.height != null) {
-      await _localDbService.saveUserHeight(event.height!);
-    }
-    if (event.weight != null) {
-      await _localDbService.saveUserWeight(event.weight!);
-    }
-
-    emit(
-      state.copyWith(
-        userName: event.name,
-        userAge: event.age,
-        userGender: event.gender,
-        userHeight: event.height,
-        userWeight: event.weight,
-      ),
-    );
-  }
-
-  Future<void> _onUpdateThemeMode(
-    UpdateThemeMode event,
-    Emitter<SettingsState> emit,
-  ) async {
-    await _localDbService.saveThemeMode(event.mode);
-    emit(state.copyWith(themeMode: event.mode));
-  }
-
-  Future<void> _onUpdateKeepScreenAwake(
-    UpdateKeepScreenAwake event,
-    Emitter<SettingsState> emit,
-  ) async {
-    await _localDbService.saveKeepScreenAwake(event.keepAwake);
-    emit(state.copyWith(keepScreenAwake: event.keepAwake));
-  }
-
-  Future<void> _onUpdatePlayTimerSound(
-    UpdatePlayTimerSound event,
-    Emitter<SettingsState> emit,
-  ) async {
-    await _localDbService.savePlayTimerSound(event.playSound);
-    emit(state.copyWith(playTimerSound: event.playSound));
   }
 }

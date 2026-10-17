@@ -11,6 +11,44 @@ Previous performance shows the corresponding completed-set position, falling bac
 to the final completed set when needed. Tapping it opens a scrollable list of completed
 sets from the previous session. This changes display only; prefill and persistence rules remain.
 
+The shared exercise editor now groups name and targets, keeps the setup note compact,
+and hides custom rest until requested. An existing override remains visible. Returning
+to app defaults is explicit. The save action stays outside the scrolling form when space
+permits; very short layouts scroll as a whole. Field controllers preserve typed input through
+keyboard/width changes. Validation reveals the first invalid field. Outside taps do not
+dismiss the editor; Close or platform Back cancel. Suggestions, custom names, name locks,
+exercise IDs, images and existing targets remain supported. No storage format changed.
+
+Settings now groups training, personal preferences and backup actions in readable rows.
+The default-rest sheet uses themed presets and a validated custom value. Rest saves are
+awaited; failures keep the last saved value. Existing backup services remain in use;
+backup validation/rollback and complete restore-state refresh are still later work.
+
+Onboarding keeps five steps with back navigation, scrollable content, accessible day
+selection and platform-specific time pickers. Reminders are enabled only after permission
+is granted; Not now and denial leave them off. Setup waits for schedule persistence and
+rescheduling before marking onboarding complete, with busy states and retryable errors.
+Failed completion writes can retry without saving the schedule again. No reminder-date
+algorithms or Hive fields changed.
+
+Profile now keeps appearance choices and optional details in a responsive form with a reachable
+save action. Clearing a field removes its saved value. Saves wait for storage, retain input on
+failure and report success only after completion. Existing BMI thresholds remain unchanged.
+
+Schedule details retain the saved time and days during failures, with a visible retry action.
+Day selection can be cancelled without saving. Enabling reminders requests permission; disabling
+them does not. Schedule mutations are serialized, and notification failures distinguish a saved
+schedule from failed reminder updates. Onboarding and Settings share the adaptive time picker.
+Existing storage keys, Hive IDs and reminder-date algorithms are unchanged.
+
+Progress now groups saved sessions by month and year, with all-time workout, logged-set and
+volume totals. Session rows show the day, recorded duration and completed-set count. Details
+retain saved exercise names over later plan names, exclude unfinished sets, preserve original
+set positions and label existing warm-up/drop sets. Their completed volume rules are unchanged.
+Legacy records without a valid end time show an unavailable duration rather than time since
+the workout started. No history is rewritten. Charts, exercise identity and personal-record
+rules remain for the foundation and progress feature work.
+
 ## Historical design review — 12 October 2026
 
 The user rejected the earlier generated concepts and agreed on a direction drawn
@@ -66,7 +104,12 @@ Completed sets remain visible with undo. Suggested sets do not contribute to tot
 
 The app uses the existing Hive data and BLoC flow. It now includes prefilled set entry, completion undo,
 rest extension/skip, exercise notes/targets, plan exercise ordering, saved session details, and tablet overview.
-There are no new packages or generated graphics in this slice. Existing settings and onboarding remain for later refinement.
+There are no new packages or generated graphics in this slice. Settings and onboarding were subsequently
+refined in Phase 2; the current flow review and remaining limits are in [phase-2-review.md](phase-2-review.md).
+
+The final Phase 2 pass reduced Plans/editor heading emphasis, allowed long routine names full width,
+stacked day counts for compact/large-text layouts and fixed repeated plan-save failure feedback.
+Edits remain visible after failure; successful saves close the editor only after persistence.
 
 Review: visual character, ease of reading while tired, reachability of logging controls,
 and the refined Focus design. Review empty/error states and native platform behavior in implementation.

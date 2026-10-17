@@ -1,513 +1,384 @@
-import 'package:flutter/cupertino.dart';
+import '../../widgets/workout_time_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import 'package:spottr/core/theme/app_colors_extension.dart';
-
+import '../../../core/theme/app_colors_extension.dart';
 import '../../../data/datasources/local_database_service.dart';
 import '../../../data/models/workout_schedule.dart';
 import '../../../notifications/notification_permission_handler.dart';
 import '../../blocs/schedule/schedule_bloc.dart';
 import '../../blocs/schedule/schedule_event.dart';
+import '../../blocs/schedule/schedule_state.dart';
+import '../../widgets/spottr_button.dart';
 import '../home_screen.dart';
 
-/// Five-step onboarding flow shown on first launch.
-///
-/// Steps:
-///   1. Welcome
-///   2. Workout Time
-///   3. Workout Days
-///   4. Enable Notifications
-///   5. Finish / navigate to Home
 class OnboardingFlowScreen extends StatefulWidget {
   const OnboardingFlowScreen({super.key});
-
   @override
   State<OnboardingFlowScreen> createState() => _OnboardingFlowScreenState();
 }
 
 class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
-  final PageController _pageController = PageController();
-  int _currentPage = 0;
+  final _pages = PageController();
+  int _page = 0;
+  bool _moving = false;
+  bool _requesting = false;
+  bool _finishing = false;
+  bool _scheduleSaved = false;
+  TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
+  final _days = <int>[];
+  String _permissionStatus = 'undetermined';
+  WorkoutSchedule? _pendingSchedule;
+  static const _dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  // Collected data
-  TimeOfDay? _selectedTime;
-  final List<int> _selectedDays = []; // 1=Mon … 7=Sun
+  Future<void> _go(int page) async {
+    if (_moving || _finishing || _requesting) return;
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _pages.jumpToPage(page);
+      return;
+    }
+    setState(() => _moving = true);
+    await _pages.animateToPage(
+      page,
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeOutCubic,
+    );
+    if (mounted) setState(() => _moving = false);
+  }
 
-  static const List<String> _dayLabels = [
-    'Mon',
-    'Tue',
-    'Wed',
-    'Thu',
-    'Fri',
-    'Sat',
-    'Sun',
-  ];
+  void _error(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(SnackBar(content: Text(message)));
+  }
 
-  void _next() {
-    if (_currentPage < 4) {
-      _pageController.nextPage(
-        duration: const Duration(milliseconds: 350),
-        curve: Curves.easeInOut,
-      );
+  Future<void> _requestPermission() async {
+    if (_requesting) return;
+    setState(() => _requesting = true);
+    try {
+      final granted = await GetIt.I<NotificationPermissionHandler>()
+          .requestPermission();
+      if (!mounted) return;
+      setState(() {
+        _permissionStatus = granted ? 'granted' : 'denied';
+        _requesting = false;
+        _scheduleSaved = false;
+      });
+      _go(4);
+    } catch (_) {
+      if (mounted) setState(() => _requesting = false);
+      _error('Could not request notifications. Try again or choose Not now.');
     }
   }
 
-  Future<void> _finish() async {
-    final schedule = WorkoutSchedule(
-      workoutHour: _selectedTime?.hour ?? 6,
-      workoutMinute: _selectedTime?.minute ?? 0,
-      workoutDays: _selectedDays.isNotEmpty ? _selectedDays : [1, 2, 3, 4, 5],
-      remindersEnabled: true,
-    );
+  Future<void> _pickTime() async {
+    final selected = await showWorkoutTimePicker(context, _time);
+    if (selected != null && mounted) {
+      setState(() {
+        _time = selected;
+        _scheduleSaved = false;
+      });
+    }
+  }
 
-    if (!mounted) return;
-    context.read<ScheduleBloc>().add(SaveSchedule(schedule));
-    await GetIt.I<LocalDatabaseService>().setOnboardingCompleted();
-
-    if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => const HomeScreen(),
-        transitionDuration: const Duration(milliseconds: 400),
-        transitionsBuilder: (_, animation, __, child) =>
-            FadeTransition(opacity: animation, child: child),
-      ),
+  void _finish() {
+    if (_finishing) return;
+    setState(() => _finishing = true);
+    if (_scheduleSaved) {
+      _complete();
+      return;
+    }
+    _pendingSchedule = WorkoutSchedule(
+      workoutHour: _time.hour,
+      workoutMinute: _time.minute,
+      workoutDays: List.of(_days)..sort(),
+      remindersEnabled: _permissionStatus == 'granted',
+      notificationPermissionStatus: _permissionStatus,
     );
+    context.read<ScheduleBloc>().add(SaveSchedule(_pendingSchedule!));
+  }
+
+  Future<void> _complete() async {
+    try {
+      await GetIt.I<LocalDatabaseService>().setOnboardingCompleted();
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder<void>(
+          pageBuilder: (context, animation, secondaryAnimation) =>
+              const HomeScreen(),
+          transitionDuration: MediaQuery.disableAnimationsOf(context)
+              ? Duration.zero
+              : const Duration(milliseconds: 180),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+              FadeTransition(opacity: animation, child: child),
+        ),
+      );
+    } catch (_) {
+      if (mounted) setState(() => _finishing = false);
+      _error('Could not finish setup. Try again.');
+    }
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _pages.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: context.colors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Progress indicator
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-              child: _buildProgressDots(),
-            ),
-            Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (i) => setState(() => _currentPage = i),
+  Widget build(
+    BuildContext context,
+  ) => BlocListener<ScheduleBloc, ScheduleState>(
+    listener: (context, state) {
+      if (!_finishing || _pendingSchedule == null) return;
+      if (state is ScheduleLoaded &&
+          identical(state.schedule, _pendingSchedule)) {
+        _pendingSchedule = null;
+        _scheduleSaved = true;
+        _complete();
+      } else if (state is ScheduleError) {
+        setState(() {
+          _finishing = false;
+          _pendingSchedule = null;
+        });
+        _error('Could not save your schedule. Try again.');
+      }
+    },
+    child: PopScope(
+      canPop: _page == 0 && !_finishing && !_requesting,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && _page > 0) _go(_page - 1);
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 600),
+              child: Column(
                 children: [
-                  _WelcomePage(onContinue: _next),
-                  _WorkoutTimePage(
-                    onTimeSelected: (t) => setState(() => _selectedTime = t),
-                    selectedTime: _selectedTime,
-                    onContinue: _next,
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            if (_page > 0)
+                              IconButton(
+                                tooltip: 'Previous step',
+                                icon: const Icon(Icons.arrow_back_rounded),
+                                onPressed: _finishing || _requesting || _moving
+                                    ? null
+                                    : () => _go(_page - 1),
+                              ),
+                            Expanded(
+                              child: Text(
+                                'Spottr',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                            ),
+                            Semantics(
+                              label: 'Step ${_page + 1} of 5',
+                              child: Text(
+                                '${_page + 1} of 5',
+                                style: Theme.of(context).textTheme.bodyMedium,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        LinearProgressIndicator(
+                          value: (_page + 1) / 5,
+                          minHeight: 3,
+                          backgroundColor: context.colors.divider,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ],
+                    ),
                   ),
-                  _WorkoutDaysPage(
-                    selectedDays: _selectedDays,
-                    dayLabels: _dayLabels,
-                    onToggle: (d) => setState(() {
-                      _selectedDays.contains(d)
-                          ? _selectedDays.remove(d)
-                          : _selectedDays.add(d);
-                    }),
-                    onContinue: _next,
+                  Expanded(
+                    child: PageView(
+                      controller: _pages,
+                      physics: const NeverScrollableScrollPhysics(),
+                      onPageChanged: (page) => setState(() => _page = page),
+                      children: [
+                        _OnboardingPage(
+                          key: const ValueKey('welcome-step'),
+                          icon: Icons.fitness_center_rounded,
+                          title: 'Make every set easier to log',
+                          description:
+                              'Keep your routine, setup notes and workout progress together. Ready when you are.',
+                          action: SpottrButton(
+                            text: 'Continue',
+                            onPressed: _moving ? null : () => _go(1),
+                          ),
+                        ),
+                        _OnboardingPage(
+                          key: const ValueKey('time-step'),
+                          icon: Icons.schedule_rounded,
+                          title: 'When do you train?',
+                          description:
+                              'Choose your usual workout time. You can change it in Settings.',
+                          content: OutlinedButton.icon(
+                            onPressed: _pickTime,
+                            icon: const Icon(Icons.schedule_rounded),
+                            label: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              child: Text(
+                                _time.format(context),
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium,
+                              ),
+                            ),
+                          ),
+                          action: SpottrButton(
+                            text: 'Continue',
+                            onPressed: _moving ? null : () => _go(2),
+                          ),
+                        ),
+                        _OnboardingPage(
+                          key: const ValueKey('days-step'),
+                          icon: Icons.calendar_today_outlined,
+                          title: 'Choose your training days',
+                          description: 'Select the days that fit your week.',
+                          content: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (var i = 0; i < 7; i++)
+                                FilterChip(
+                                  label: Text(_dayLabels[i]),
+                                  selected: _days.contains(i + 1),
+                                  onSelected: (selected) => setState(() {
+                                    selected
+                                        ? _days.add(i + 1)
+                                        : _days.remove(i + 1);
+                                    _scheduleSaved = false;
+                                  }),
+                                ),
+                            ],
+                          ),
+                          action: SpottrButton(
+                            text: 'Continue',
+                            onPressed: _days.isEmpty || _moving
+                                ? null
+                                : () => _go(3),
+                          ),
+                        ),
+                        _OnboardingPage(
+                          key: const ValueKey('notifications-step'),
+                          icon: Icons.notifications_outlined,
+                          title: 'A reminder, if you want one',
+                          description:
+                              'Allow notifications for workout reminders. You can also train without them.',
+                          action: Column(
+                            children: [
+                              SpottrButton(
+                                text: 'Allow notifications',
+                                isLoading: _requesting,
+                                onPressed: _requestPermission,
+                              ),
+                              const SizedBox(height: 8),
+                              TextButton(
+                                onPressed: _requesting || _moving
+                                    ? null
+                                    : () {
+                                        setState(() {
+                                          _permissionStatus = 'undetermined';
+                                          _scheduleSaved = false;
+                                        });
+                                        _go(4);
+                                      },
+                                child: const Text('Not now'),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _OnboardingPage(
+                          key: const ValueKey('finish-step'),
+                          icon: Icons.check_circle_outline_rounded,
+                          title: 'Ready for your first set',
+                          description:
+                              'Create your plan next. Your training preferences can always be changed in Settings.',
+                          action: SpottrButton(
+                            text: 'Start using Spottr',
+                            isLoading: _finishing,
+                            onPressed: _moving ? null : _finish,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  _NotificationPermissionPage(onContinue: _next),
-                  _FinishPage(onFinish: _finish),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
-    );
-  }
-
-  Widget _buildProgressDots() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(5, (i) {
-        final active = i == _currentPage;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: active ? 24 : 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: active
-                ? context.colors.primaryAccent
-                : context.colors.divider,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        );
-      }),
-    );
-  }
+    ),
+  );
 }
 
-// ─────────────────────────────────────────────────────── Page 1: Welcome
-
-class _WelcomePage extends StatelessWidget {
-  final VoidCallback onContinue;
-  const _WelcomePage({required this.onContinue});
-
-  @override
-  Widget build(BuildContext context) {
-    return _OnboardingScaffold(
-      icon: Icons.fitness_center_rounded,
-      title: 'Never Miss a Workout',
-      description:
-          'Spottr can remind you about your workouts, help you stay consistent, '
-          'protect your streaks, and celebrate your progress.',
-      button: _PrimaryButton(label: 'Continue', onTap: onContinue),
-    );
-  }
-}
-
-class _WorkoutTimePage extends StatefulWidget {
-  final TimeOfDay? selectedTime;
-  final ValueChanged<TimeOfDay> onTimeSelected;
-  final VoidCallback onContinue;
-  const _WorkoutTimePage({
-    required this.selectedTime,
-    required this.onTimeSelected,
-    required this.onContinue,
-  });
-
-  @override
-  State<_WorkoutTimePage> createState() => _WorkoutTimePageState();
-}
-
-class _WorkoutTimePageState extends State<_WorkoutTimePage> {
-  // Default: 06:00 AM — keep as DateTime for CupertinoDatePicker
-  late DateTime _pickerDate = DateTime(2000, 1, 1, 6, 0);
-
-  String _formatTime(DateTime dt) {
-    final h = dt.hour;
-    final m = dt.minute;
-    final period = h < 12 ? 'AM' : 'PM';
-    final displayH = h == 0 ? 12 : (h > 12 ? h - 12 : h);
-    return '${displayH.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')} $period';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _OnboardingScaffold(
-      icon: Icons.access_time_rounded,
-      title: 'When Do You Usually Work Out?',
-      description: 'Choose the time you typically begin your workout.',
-      extraContent: Column(
-        children: [
-          const SizedBox(height: 16),
-          // Selected time badge
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(
-              color: context.colors.primaryAccent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: context.colors.primaryAccent.withValues(alpha: 0.4),
-              ),
-            ),
-            child: Text(
-              _formatTime(_pickerDate),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: context.colors.primaryAccent,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            height: 160,
-            child: CupertinoTheme(
-              data: CupertinoThemeData(
-                brightness: Theme.of(context).brightness,
-                textTheme: CupertinoTextThemeData(
-                  pickerTextStyle: TextStyle(
-                    color: context.colors.primaryText,
-                    fontSize: 22,
-                  ),
-                ),
-              ),
-              child: CupertinoDatePicker(
-                mode: CupertinoDatePickerMode.time,
-                use24hFormat: false,
-                initialDateTime: _pickerDate,
-                onDateTimeChanged: (dt) {
-                  setState(() => _pickerDate = dt);
-                  widget.onTimeSelected(
-                    TimeOfDay(hour: dt.hour, minute: dt.minute),
-                  );
-                },
-              ),
-            ),
-          ),
-        ],
-      ),
-      button: _PrimaryButton(label: 'Continue', onTap: onContinue),
-    );
-  }
-
-  VoidCallback get onContinue => widget.onContinue;
-}
-
-class _WorkoutDaysPage extends StatelessWidget {
-  final List<int> selectedDays;
-  final List<String> dayLabels;
-  final ValueChanged<int> onToggle;
-  final VoidCallback onContinue;
-
-  const _WorkoutDaysPage({
-    required this.selectedDays,
-    required this.dayLabels,
-    required this.onToggle,
-    required this.onContinue,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return _OnboardingScaffold(
-      icon: Icons.calendar_today_rounded,
-      title: 'Which Days Do You Train?',
-      description: 'Select the days you usually work out.',
-      extraContent: Padding(
-        padding: const EdgeInsets.only(top: 16),
-        child: Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          alignment: WrapAlignment.center,
-          children: List.generate(7, (i) {
-            final weekday = i + 1; // 1=Mon…7=Sun
-            final selected = selectedDays.contains(weekday);
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              child: GestureDetector(
-                onTap: () => onToggle(weekday),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 18,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: selected
-                        ? context.colors.primaryAccent
-                        : context.colors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: selected
-                          ? context.colors.primaryAccent
-                          : context.colors.divider,
-                    ),
-                  ),
-                  child: Text(
-                    dayLabels[i],
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: selected
-                          ? Colors.white
-                          : context.colors.primaryText,
-                      fontWeight: selected
-                          ? FontWeight.w600
-                          : FontWeight.normal,
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }),
-        ),
-      ),
-      button: _PrimaryButton(
-        label: 'Continue',
-        onTap: selectedDays.isEmpty ? null : onContinue,
-      ),
-    );
-  }
-}
-
-class _NotificationPermissionPage extends StatefulWidget {
-  final VoidCallback onContinue;
-  const _NotificationPermissionPage({required this.onContinue});
-
-  @override
-  State<_NotificationPermissionPage> createState() =>
-      _NotificationPermissionPageState();
-}
-
-class _NotificationPermissionPageState
-    extends State<_NotificationPermissionPage> {
-  bool _requested = false;
-
-  Future<void> _requestAndContinue() async {
-    await GetIt.I<NotificationPermissionHandler>().requestPermission();
-    setState(() => _requested = true);
-    widget.onContinue();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _OnboardingScaffold(
-      icon: Icons.notifications_active_rounded,
-      title: 'Stay Consistent',
-      description:
-          'Allow notifications so Spottr can remind you before workouts, '
-          'help you maintain your streak, and keep you motivated.',
-      button: Column(
-        children: [
-          _PrimaryButton(
-            label: 'Enable Notifications',
-            onTap: _requested ? null : _requestAndContinue,
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: widget.onContinue,
-            child: Text(
-              'Skip for now',
-              style: TextStyle(color: context.colors.secondaryText),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FinishPage extends StatelessWidget {
-  final VoidCallback onFinish;
-  const _FinishPage({required this.onFinish});
-
-  @override
-  Widget build(BuildContext context) {
-    return _OnboardingScaffold(
-      icon: Icons.check_circle_rounded,
-      title: "You're All Set!",
-      description:
-          'Your workout schedule has been saved.\n'
-          'Spottr will remind you when it\'s time to train.',
-      button: _PrimaryButton(label: 'Start Using Spottr', onTap: onFinish),
-    );
-  }
-}
-
-class _OnboardingScaffold extends StatelessWidget {
+class _OnboardingPage extends StatelessWidget {
   final IconData icon;
   final String title;
   final String description;
-  final Widget? extraContent;
-  final Widget button;
-
-  const _OnboardingScaffold({
+  final Widget? content;
+  final Widget action;
+  const _OnboardingPage({
+    super.key,
     required this.icon,
     required this.title,
     required this.description,
-    this.extraContent,
-    required this.button,
+    this.content,
+    required this.action,
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Spacer(),
-          // Icon container with gradient
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  context.colors.primaryAccent,
-                  context.colors.secondaryAccent,
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(minHeight: constraints.maxHeight),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: context.colors.surface,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Icon(
+                      icon,
+                      size: 28,
+                      color: context.colors.primaryAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(title, style: Theme.of(context).textTheme.headlineLarge),
+                  const SizedBox(height: 12),
+                  Text(
+                    description,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  if (content != null) ...[
+                    const SizedBox(height: 28),
+                    content!,
+                  ],
                 ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
               ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: context.colors.primaryAccent.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Icon(icon, color: Colors.white, size: 40),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            description,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: context.colors.secondaryText,
-              height: 1.6,
-            ),
-          ),
-          if (extraContent != null) ...[
-            const SizedBox(height: 8),
-            extraContent!,
-          ],
-          const Spacer(),
-          button,
-          const SizedBox(height: 32),
-        ],
-      ),
-    );
-  }
-}
-
-class _PrimaryButton extends StatelessWidget {
-  final String label;
-  final VoidCallback? onTap;
-
-  const _PrimaryButton({required this.label, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final enabled = onTap != null;
-    return AnimatedOpacity(
-      opacity: enabled ? 1.0 : 0.4,
-      duration: const Duration(milliseconds: 200),
-      child: SizedBox(
-        width: double.infinity,
-        child: ElevatedButton(
-          onPressed: onTap,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: context.colors.primaryAccent,
-            foregroundColor: Colors.black,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-            ),
-            elevation: 0,
-          ),
-          child: Text(
-            label,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-              color: Colors.white,
-            ),
+              Padding(padding: const EdgeInsets.only(top: 32), child: action),
+            ],
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }

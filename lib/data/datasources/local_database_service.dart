@@ -110,6 +110,20 @@ class LocalDatabaseService {
   }
 
   // --- Profile & Appearance ---
+  Future<void> saveProfile({
+    String? name,
+    int? age,
+    String? gender,
+    double? height,
+    double? weight,
+  }) => _settingsBox.putAll({
+    'user_name': name,
+    'user_age': age,
+    'user_height': height,
+    'user_weight': weight,
+    'user_gender': ?gender,
+  });
+
   String? getUserName() => _settingsBox.get('user_name') as String?;
   Future<void> saveUserName(String name) async =>
       _settingsBox.put('user_name', name);

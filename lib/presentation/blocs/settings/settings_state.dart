@@ -10,6 +10,9 @@ class SettingsState extends Equatable {
   final String themeMode;
   final bool keepScreenAwake;
   final bool playTimerSound;
+  final bool isSaving;
+  final String? errorMessage;
+  final int profileRevision;
 
   const SettingsState({
     this.userName,
@@ -20,6 +23,9 @@ class SettingsState extends Equatable {
     this.themeMode = 'system',
     this.keepScreenAwake = true,
     this.playTimerSound = true,
+    this.isSaving = false,
+    this.errorMessage,
+    this.profileRevision = 0,
   });
 
   SettingsState copyWith({
@@ -31,16 +37,23 @@ class SettingsState extends Equatable {
     String? themeMode,
     bool? keepScreenAwake,
     bool? playTimerSound,
+    bool? isSaving,
+    String? errorMessage,
+    int? profileRevision,
+    bool replaceProfile = false,
   }) {
     return SettingsState(
-      userName: userName ?? this.userName,
-      userAge: userAge ?? this.userAge,
+      userName: replaceProfile ? userName : userName ?? this.userName,
+      userAge: replaceProfile ? userAge : userAge ?? this.userAge,
       userGender: userGender ?? this.userGender,
-      userHeight: userHeight ?? this.userHeight,
-      userWeight: userWeight ?? this.userWeight,
+      userHeight: replaceProfile ? userHeight : userHeight ?? this.userHeight,
+      userWeight: replaceProfile ? userWeight : userWeight ?? this.userWeight,
       themeMode: themeMode ?? this.themeMode,
       keepScreenAwake: keepScreenAwake ?? this.keepScreenAwake,
       playTimerSound: playTimerSound ?? this.playTimerSound,
+      isSaving: isSaving ?? this.isSaving,
+      errorMessage: errorMessage,
+      profileRevision: profileRevision ?? this.profileRevision,
     );
   }
 
@@ -54,5 +67,8 @@ class SettingsState extends Equatable {
     themeMode,
     keepScreenAwake,
     playTimerSound,
+    isSaving,
+    errorMessage,
+    profileRevision,
   ];
 }

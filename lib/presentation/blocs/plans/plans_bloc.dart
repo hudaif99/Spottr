@@ -8,6 +8,7 @@ class PlansBloc extends Bloc<PlansEvent, PlansState> {
 
   PlansBloc(this._repository) : super(PlansInitial()) {
     on<PlansEvent>((event, emit) async {
+      if (event is! LoadPlans) emit(PlansLoading());
       if (event is LoadPlans) await _onLoadPlans(event, emit);
       if (event is AddPlan) await _onAddPlan(event, emit);
       if (event is UpdatePlan) await _onUpdatePlan(event, emit);

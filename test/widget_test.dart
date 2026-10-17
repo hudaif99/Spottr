@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -22,7 +23,8 @@ import 'package:spottr/presentation/blocs/workout/workout_event.dart';
 import 'package:spottr/presentation/blocs/workout/workout_state.dart';
 import 'package:spottr/presentation/screens/active_workout_screen.dart';
 import 'package:spottr/presentation/screens/home_screen.dart';
-import 'package:spottr/presentation/screens/create_plan_screen.dart';
+import 'package:spottr/presentation/screens/plan_management_screen.dart';
+import 'package:spottr/presentation/widgets/spottr_button.dart';
 import 'package:spottr/presentation/widgets/exercise_editor.dart';
 import 'support/fake_workout_repository.dart';
 
@@ -70,12 +72,13 @@ void main() {
     bool dark = false,
     double textScale = 1,
     bool start = false,
+    Plan? initialPlan,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final repo = FakeWorkoutRepository()..plans.add(plan);
+    final repo = FakeWorkoutRepository()..plans.add(initialPlan ?? plan);
     final workout = WorkoutBloc(repo);
     final plans = PlansBloc(repo)..add(LoadPlans());
     final history = HistoryBloc(repo)..add(LoadHistory());
@@ -105,15 +108,18 @@ void main() {
           BlocProvider.value(value: settings),
           BlocProvider.value(value: timer),
         ],
-        child: MaterialApp(
-          theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: child!,
+        child: RepaintBoundary(
+          key: boundary,
+          child: MaterialApp(
+            theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(textScale)),
+              child: child!,
+            ),
+            home: screen,
           ),
-          home: RepaintBoundary(key: boundary, child: screen),
         ),
       ),
     );
@@ -256,6 +262,7 @@ void main() {
       );
       await tester.tap(find.text('Add'));
       await tester.pumpAndSettle();
+      await capture(tester, 'exercise-editor-small');
       await tester.tap(find.text('Add exercise'));
       await tester.pumpAndSettle();
       expect(find.text('Enter a name'), findsOneWidget);
@@ -276,18 +283,135 @@ void main() {
     },
   );
 
-  testWidgets('plan editor stays open when saving fails', (tester) async {
-    final (repo, _) = await mount(tester, CreatePlanScreen(plan: plan));
+  for (final (size, scale, dark, name) in [
+    (const Size(390, 844), 1.0, true, 'exercise-editor-dark'),
+    (const Size(320, 568), 1.8, false, 'exercise-editor-large-text'),
+    (const Size(1194, 834), 1.0, false, 'exercise-editor-tablet'),
+  ]) {
+    testWidgets('exercise details preserve values in $name', (tester) async {
+      Exercise? saved;
+      final original = exercises.first.copyWith(
+        useDefaultRest: false,
+        restDurationSeconds: 120,
+      );
+      await mount(
+        tester,
+        Builder(
+          builder: (context) => Scaffold(
+            body: TextButton(
+              onPressed: () async {
+                saved = await showExerciseEditor(context, exercise: original);
+              },
+              child: const Text('Edit exercise'),
+            ),
+          ),
+        ),
+        size: size,
+        dark: dark,
+        textScale: scale,
+      );
+      await tester.tap(find.text('Edit exercise'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await capture(tester, name);
+      await tester.ensureVisible(find.text('Save details'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save details'));
+      await tester.pumpAndSettle();
+      expect(saved?.note, original.note);
+      expect(saved?.restDurationSeconds, 120);
+      expect(saved?.useDefaultRest, isFalse);
+      expect(saved?.targetWeight, original.targetWeight);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
+  for (final (size, scale, dark, name) in [
+    (const Size(390, 844), 1.0, false, 'plans-light'),
+    (const Size(320, 568), 1.8, true, 'plans-large-text-dark'),
+    (const Size(1194, 834), 1.0, true, 'plans-tablet-dark'),
+  ]) {
+    testWidgets('plans and routine editing remain usable in $name', (
+      tester,
+    ) async {
+      final longPlan = plan.copyWith(
+        name: 'Strength and conditioning for the whole week',
+        days: [day.copyWith(name: 'Lower body, glutes and posterior chain')],
+      );
+      await mount(
+        tester,
+        const PlanManagementScreen(),
+        size: size,
+        textScale: scale,
+        dark: dark,
+        initialPlan: longPlan,
+      );
+      expect(find.text('Current routine'), findsOneWidget);
+      await capture(tester, name);
+      await tester.ensureVisible(find.text('Edit routine'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit routine'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit your plan'), findsOneWidget);
+      await capture(tester, '$name-editor');
+      await tester.ensureVisible(find.text('Save plan'));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.byType(PlanManagementScreen), findsOneWidget);
+      expect(find.text('Edit your plan'), findsNothing);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets('plan editor retries repeated failures and waits for saving', (
+    tester,
+  ) async {
+    final (repo, _) = await mount(tester, const PlanManagementScreen());
+    await tester.ensureVisible(find.text('Edit routine'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Edit routine'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).first, 'My updated routine');
     repo.failSave = true;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      await tester.ensureVisible(find.text('Save plan'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save plan'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 350));
+      expect(
+        find.text('Could not save your plan. Please try again.'),
+        findsOneWidget,
+      );
+      expect(find.text('Edit your plan'), findsOneWidget);
+      final save = tester.widget<SpottrButton>(
+        find.widgetWithText(SpottrButton, 'Save plan'),
+      );
+      expect(save.isLoading, isFalse);
+      expect(find.text('My updated routine'), findsOneWidget);
+    }
+    repo.failSave = false;
+    repo.planSaveGate = Completer<void>();
+    addTearDown(() {
+      if (!repo.planSaveGate!.isCompleted) repo.planSaveGate!.complete();
+    });
     await tester.ensureVisible(find.text('Save plan'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Save plan'));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 350));
-    expect(
-      find.text('Could not save your plan. Please try again.'),
-      findsOneWidget,
-    );
     expect(find.text('Edit your plan'), findsOneWidget);
+    expect(repo.plans.single.name, plan.name);
+    repo.planSaveGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Edit your plan'), findsNothing);
+    expect(repo.plans.single.name, 'My updated routine');
+    expect(
+      repo.plans.single.days.single.exercises.first.note,
+      exercises.first.note,
+    );
     expect(tester.takeException(), isNull);
     await unmount(tester);
   });

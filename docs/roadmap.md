@@ -12,7 +12,7 @@
 | Phase | Deliverable | Exit criteria | Status |
 | --- | --- | --- | --- |
 | 1. Setup | Preserve app, create branch, add project guidance | Branch references and documentation verified | Complete |
-| 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | In progress: existing Flutter direction retained; Active Workout/Today polish implemented |
+| 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Implementation reviewed; user/native-device sign-off pending |
 | 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Session reliability and visual tokens implemented; model extraction remains |
 | 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | First implementation slice; catalog and session replacement remain |
 | 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Session details implemented; remaining work planned |
@@ -34,6 +34,65 @@ Implementation phases may deliver small end-to-end slices; avoid building unused
 - Verified this slice with 12 focused widget tests and clean analysis of changed code/tests.
   Reviewed captured Flutter screens in both themes, compact/large-text layouts and tablet layout.
   Native Android/iOS interaction, device and screen-reader checks remain outstanding.
+
+### Exercise editor refinement — 17 October 2026
+
+- Grouped targets, compact optional notes, explicit custom/default rest, and a clear primary action.
+- Preserved inputs through keyboard/rotation changes; compact landscape can scroll the whole editor.
+- Kept custom names, offline suggestions, locked logged names and existing exercise metadata.
+- Passed 19 relevant tests, including edited-value round trips, invalid rest, default-rest reset,
+  compact keyboard/landscape, large text, dark/tablet editing and existing workout/plan flows.
+- Changed-code/test analysis is clean. Reviewed actual Flutter captures; native keyboard/iOS and
+  screen-reader checks remain. Settings/onboarding consistency and remaining Phase 2 review are next.
+
+### Settings and onboarding refinement — 17 October 2026
+
+- Reworked Settings into clear training/personal/data groups; kept existing destinations and backup services.
+- Added responsive default-rest presets/custom entry, awaited saves, recoverable errors and adaptive preference switches.
+- Replaced onboarding's fixed decorative layout with scrollable steps, back/progress controls,
+  platform time pickers, accessible day chips, shared actions and reduced-motion transitions.
+- Fixed skipped/denied notifications enabling reminders and setup completing before schedule saves finished.
+  Save/retry paths retain selections and wait for persistence and rescheduling; reminder-date algorithms are unchanged.
+- Passed 22 tests: nine new settings/onboarding tests plus 13 existing UI regression tests.
+  Changed-code/test analysis and formatting passed; reviewed Flutter renders in both themes,
+  large text and tablet layouts. Native permissions/pickers, file backup operations and iOS builds remain unverified.
+- Still in Phase 2. Next: profile/appearance and schedule-detail consistency, then remaining Progress/experience review.
+
+### Profile and schedule refinement — 17 October 2026
+
+- Refined profile with wrapping theme choices, optional validated details and a persistent save action.
+- Profile fields can be cleared; writes are awaited and serialized, with retained input and retryable errors.
+- Refined schedule rows and day selection, with shared Android/iOS time pickers and permission-aware reminders.
+- Kept saved schedule context through failures and distinguished persistence from notification-update failures.
+- Passed 33 focused tests covering settings/onboarding, profile save/clear/failure, schedule retry and queued
+  edits, existing workout/editor flows and classic storage compatibility. No Hive IDs or fields changed.
+- Reviewed Flutter renders in light/dark, compact/large-text and tablet layouts. Native notification behavior,
+  device keyboards, screen readers and iOS builds still need supported tooling.
+- Phase 2 remains in progress. Next: Progress and the remaining experience review.
+
+### Progress and history refinement — 17 October 2026
+
+- Replaced the oversized history introduction with a compact all-time summary and month/year grouping.
+- Added readable session dates, logged-set counts, recorded durations and adaptive summary metrics.
+- Refined session details while retaining saved names, original set positions and completed warm-up/drop sets.
+- Legacy records without a valid end time no longer show an ever-growing duration. No stored data changed.
+- Passed 21 focused tests: eight history/summary tests and 13 existing workout/editor regressions.
+  Covered totals, missing end times, name snapshots, month/year order, retry, and light/dark compact,
+  large-text and tablet layouts. Reviewed actual Flutter captures; scoped analysis is clean.
+- Phase 2 remains open for the final experience review and native-device feedback. Exercise trends and
+  personal records depend on the planned identity/model foundation; no chart or record rules were added.
+- Next: review remaining Phase 2 gaps and agree the foundation slice before expanding features.
+
+### Final experience review — 17 October 2026
+
+- Recorded the flow review, open limitations and next foundation boundary in [phase-2-review.md](phase-2-review.md).
+- Fixed repeated plan-save failures leaving the editor busy; verified retained input and delayed success.
+- Refined Plans/editor hierarchy, full-width routine names and responsive day counts.
+- Removed conflicting rejected Stitch instructions from the active design guide.
+- Passed 16 focused widget tests; scoped analysis and formatting are clean. Reviewed actual rendered
+  Plans/editor screens in light/dark, compact large-text and tablet layouts. Native sign-off remains open.
+- Phase 2 implementation review is complete, with user/device review still pending. Next implementation
+  slice: storage-independent models and compatible mapping, before catalog identity or backend work.
 
 ### Historical review — 12 October 2026
 

@@ -112,11 +112,13 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
       }
       if (state is PlansError) {
         setState(() => _savingId = null);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save your plan. Please try again.'),
-          ),
-        );
+        ScaffoldMessenger.of(context)
+          ..clearSnackBars()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Could not save your plan. Please try again.'),
+            ),
+          );
       }
     },
     child: PopScope(
@@ -128,7 +130,8 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
           ),
         ),
         body: SafeArea(
-          child: Center(
+          child: Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 720),
               child: SingleChildScrollView(
@@ -138,13 +141,8 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'A routine that fits you.',
-                        style: Theme.of(context).textTheme.displaySmall,
-                      ),
-                      const SizedBox(height: 12),
                       const Text(
-                        'Arrange your days. Keep useful setup cues with each exercise.',
+                        'Add your training days and exercises. Keep setup notes beside each exercise.',
                       ),
                       const SizedBox(height: 28),
                       TextField(

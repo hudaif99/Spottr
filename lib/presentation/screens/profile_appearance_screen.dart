@@ -1,75 +1,92 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:spottr/core/theme/app_colors_extension.dart';
+import '../../core/theme/app_colors_extension.dart';
 import '../blocs/settings/settings_bloc.dart';
 import '../blocs/settings/settings_event.dart';
 import '../blocs/settings/settings_state.dart';
 import '../widgets/spottr_button.dart';
-import '../widgets/spottr_text_field.dart';
 
 class ProfileAppearanceScreen extends StatefulWidget {
   const ProfileAppearanceScreen({super.key});
-
   @override
   State<ProfileAppearanceScreen> createState() =>
       _ProfileAppearanceScreenState();
 }
 
 class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
-  late TextEditingController _nameCtrl;
-  late TextEditingController _ageCtrl;
-  late TextEditingController _heightCtrl;
-  late TextEditingController _weightCtrl;
-
-  @override
-  void initState() {
-    super.initState();
-    final state = context.read<SettingsBloc>().state;
-    _nameCtrl = TextEditingController(text: state.userName ?? '');
-    _ageCtrl = TextEditingController(text: state.userAge?.toString() ?? '');
-    _heightCtrl = TextEditingController(
-      text: state.userHeight?.toString() ?? '',
-    );
-    _weightCtrl = TextEditingController(
-      text: state.userWeight?.toString() ?? '',
-    );
-  }
+  final _form = GlobalKey<FormState>();
+  late final _nameCtrl = TextEditingController(
+    text: context.read<SettingsBloc>().state.userName ?? '',
+  );
+  late final _ageCtrl = TextEditingController(
+    text: context.read<SettingsBloc>().state.userAge?.toString() ?? '',
+  );
+  late final _heightCtrl = TextEditingController(
+    text: context.read<SettingsBloc>().state.userHeight?.toString() ?? '',
+  );
+  late final _weightCtrl = TextEditingController(
+    text: context.read<SettingsBloc>().state.userWeight?.toString() ?? '',
+  );
 
   @override
   void dispose() {
-    _nameCtrl.dispose();
-    _ageCtrl.dispose();
-    _heightCtrl.dispose();
-    _weightCtrl.dispose();
+    for (final controller in [_nameCtrl, _ageCtrl, _heightCtrl, _weightCtrl]) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
-  void _saveProfile() {
+  void _save() {
+    final invalid = _form.currentState!.validateGranularly();
+    if (invalid.isNotEmpty) {
+      Scrollable.ensureVisible(invalid.first.context);
+      return;
+    }
+    FocusScope.of(context).unfocus();
     context.read<SettingsBloc>().add(
       UpdateProfile(
         name: _nameCtrl.text.trim().isEmpty ? null : _nameCtrl.text.trim(),
-        age: int.tryParse(_ageCtrl.text),
-        height: double.tryParse(_heightCtrl.text),
-        weight: double.tryParse(_weightCtrl.text),
-      ),
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Profile saved successfully'),
-        backgroundColor: context.colors.success,
+        age: int.tryParse(_ageCtrl.text.trim()),
+        height: double.tryParse(_heightCtrl.text.trim()),
+        weight: double.tryParse(_weightCtrl.text.trim()),
       ),
     );
   }
+
+  Widget _number(
+    String label,
+    TextEditingController controller, {
+    bool decimal = true,
+  }) => TextFormField(
+    key: ValueKey(label),
+    controller: controller,
+    decoration: InputDecoration(labelText: label),
+    keyboardType: TextInputType.numberWithOptions(decimal: decimal),
+    textInputAction: TextInputAction.next,
+    onChanged: (_) => setState(() {}),
+    validator: (input) {
+      if (input == null || input.trim().isEmpty) return null;
+      final value = decimal
+          ? double.tryParse(input.trim())
+          : int.tryParse(input.trim());
+      return value == null || !value.isFinite || value <= 0
+          ? 'Enter a positive ${decimal ? 'number' : 'whole number'}'
+          : null;
+    },
+  );
 
   double? _calculateBMI(double? heightCm, double? weightKg) {
     if (heightCm == null ||
         weightKg == null ||
         heightCm <= 0 ||
-        weightKg <= 0) {
+        weightKg <= 0 ||
+        !heightCm.isFinite ||
+        !weightKg.isFinite) {
       return null;
     }
     final heightM = heightCm / 100;
-    return weightKg / (heightM * heightM);
+    final value = weightKg / (heightM * heightM);
+    return value.isFinite ? value : null;
   }
 
   String _getBMICategory(double bmi) {
@@ -136,8 +153,10 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: 8,
+            runSpacing: 4,
             children: [
               Text(
                 bmi.toStringAsFixed(1),
@@ -165,139 +184,160 @@ class _ProfileAppearanceScreenState extends State<ProfileAppearanceScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile & Appearance'),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-      ),
-      body: BlocBuilder<SettingsBloc, SettingsState>(
-        builder: (context, state) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Theme Preference',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                SegmentedButton<String>(
-                  segments: const [
-                    ButtonSegment(
-                      value: 'system',
-                      label: Text('System'),
-                      icon: Icon(Icons.brightness_auto),
+  Widget build(BuildContext context) =>
+      BlocConsumer<SettingsBloc, SettingsState>(
+        listenWhen: (previous, current) =>
+            current.errorMessage != null ||
+            previous.profileRevision != current.profileRevision,
+        listener: (context, state) {
+          final message = state.errorMessage ?? 'Profile saved.';
+          ScaffoldMessenger.of(context)
+            ..clearSnackBars()
+            ..showSnackBar(SnackBar(content: Text(message)));
+        },
+        builder: (context, state) => PopScope(
+          canPop: !state.isSaving,
+          child: Scaffold(
+            appBar: AppBar(title: const Text('Profile & appearance')),
+            bottomNavigationBar: Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.viewInsetsOf(context).bottom,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Center(
+                  heightFactor: 1,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 640),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: SpottrButton(
+                        text: 'Save profile',
+                        isLoading: state.isSaving,
+                        onPressed: _save,
+                      ),
                     ),
-                    ButtonSegment(
-                      value: 'light',
-                      label: Text('Light'),
-                      icon: Icon(Icons.light_mode),
-                    ),
-                    ButtonSegment(
-                      value: 'dark',
-                      label: Text('Dark'),
-                      icon: Icon(Icons.dark_mode),
-                    ),
-                  ],
-                  selected: {state.themeMode},
-                  onSelectionChanged: (Set<String> newSelection) {
-                    context.read<SettingsBloc>().add(
-                      UpdateThemeMode(newSelection.first),
-                    );
-                  },
-                  showSelectedIcon: false,
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStateProperty.resolveWith<Color?>((
-                      Set<WidgetState> states,
-                    ) {
-                      if (states.contains(WidgetState.selected)) {
-                        return context.colors.primaryAccent.withValues(
-                          alpha: 0.2,
-                        );
-                      }
-                      return context.colors.surface;
-                    }),
-                    foregroundColor: WidgetStateProperty.resolveWith<Color?>((
-                      Set<WidgetState> states,
-                    ) {
-                      if (states.contains(WidgetState.selected)) {
-                        return context.colors.primaryAccent;
-                      }
-                      return context.colors.primaryText;
-                    }),
                   ),
                 ),
-                const SizedBox(height: 48),
-                Text(
-                  'Your Details',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                SpottrTextField(
-                  label: 'Name',
-                  hintText: 'Enter your name',
-                  controller: _nameCtrl,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SpottrTextField(
-                        label: 'Age',
-                        hintText: 'Years',
-                        controller: _ageCtrl,
-                        keyboardType: TextInputType.number,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SpottrTextField(
-                        label: 'Height',
-                        hintText: 'cm',
-                        controller: _heightCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: SpottrTextField(
-                        label: 'Weight',
-                        hintText: 'kg',
-                        controller: _weightCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(
-                          decimal: true,
-                        ),
-                        onChanged: (_) => setState(() {}),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                _buildBMIIndicator(
-                  double.tryParse(_heightCtrl.text),
-                  double.tryParse(_weightCtrl.text),
-                ),
-                const SizedBox(height: 48),
-                SpottrButton(text: 'Save Changes', onPressed: _saveProfile),
-              ],
+              ),
             ),
-          );
-        },
-      ),
-    );
-  }
+            body: SafeArea(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 640),
+                  child: AbsorbPointer(
+                    absorbing: state.isSaving,
+                    child: Form(
+                      key: _form,
+                      child: SingleChildScrollView(
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Appearance',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 12),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                for (final entry in const {
+                                  'system': 'System',
+                                  'light': 'Light',
+                                  'dark': 'Dark',
+                                }.entries)
+                                  ChoiceChip(
+                                    label: Text(entry.value),
+                                    selected: state.themeMode == entry.key,
+                                    onSelected: (selected) {
+                                      if (selected) {
+                                        context.read<SettingsBloc>().add(
+                                          UpdateThemeMode(entry.key),
+                                        );
+                                      }
+                                    },
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 32),
+                            Text(
+                              'Your details',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            const Text('All fields are optional.'),
+                            const SizedBox(height: 20),
+                            TextFormField(
+                              key: const ValueKey('Profile name'),
+                              controller: _nameCtrl,
+                              maxLength: 100,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              decoration: const InputDecoration(
+                                labelText: 'Name',
+                                counterText: '',
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            _number('Age · years', _ageCtrl, decimal: false),
+                            const SizedBox(height: 16),
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final height = _number(
+                                  'Height · cm',
+                                  _heightCtrl,
+                                );
+                                final weight = _number(
+                                  'Body weight · kg',
+                                  _weightCtrl,
+                                );
+                                if (constraints.maxWidth < 320 ||
+                                    MediaQuery.textScalerOf(context).scale(14) >
+                                        20) {
+                                  return Column(
+                                    children: [
+                                      height,
+                                      const SizedBox(height: 16),
+                                      weight,
+                                    ],
+                                  );
+                                }
+                                return Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Expanded(child: height),
+                                    const SizedBox(width: 16),
+                                    Expanded(child: weight),
+                                  ],
+                                );
+                              },
+                            ),
+                            if (_calculateBMI(
+                                  double.tryParse(_heightCtrl.text),
+                                  double.tryParse(_weightCtrl.text),
+                                ) !=
+                                null) ...[
+                              const SizedBox(height: 24),
+                              _buildBMIIndicator(
+                                double.tryParse(_heightCtrl.text),
+                                double.tryParse(_weightCtrl.text),
+                              ),
+                            ],
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
 }

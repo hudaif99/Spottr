@@ -43,12 +43,10 @@ class PlanManagementScreen extends StatelessWidget {
                 children: [
                   Text(
                     'Your plans',
-                    style: Theme.of(context).textTheme.displayMedium,
+                    style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Structure for your week. Flexibility for your day.',
-                  ),
+                  const Text('Choose a routine or build your own.'),
                   const SizedBox(height: 28),
                   if (state.plans.isEmpty) ...[
                     const SizedBox(height: 24),
@@ -79,10 +77,17 @@ class PlanManagementScreen extends StatelessWidget {
                               children: [
                                 Expanded(
                                   child: Text(
-                                    plan.name,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.headlineMedium,
+                                    plan.isActive
+                                        ? 'Current routine'
+                                        : '${plan.days.length} workout days',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .labelMedium
+                                        ?.copyWith(
+                                          color: plan.isActive
+                                              ? context.colors.success
+                                              : null,
+                                        ),
                                   ),
                                 ),
                                 PopupMenuButton<String>(
@@ -165,15 +170,8 @@ class PlanManagementScreen extends StatelessWidget {
                               ],
                             ),
                             Text(
-                              plan.isActive
-                                  ? 'CURRENT ROUTINE'
-                                  : '${plan.days.length} workout days',
-                              style: Theme.of(context).textTheme.labelMedium
-                                  ?.copyWith(
-                                    color: plan.isActive
-                                        ? context.colors.success
-                                        : null,
-                                  ),
+                              plan.name,
+                              style: Theme.of(context).textTheme.titleLarge,
                             ),
                             const SizedBox(height: 16),
                             for (final day in plan.days)
@@ -181,16 +179,37 @@ class PlanManagementScreen extends StatelessWidget {
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 8,
                                 ),
-                                child: Row(
-                                  children: [
-                                    Expanded(child: Text(day.name)),
-                                    Text(
-                                      '${day.exercises.length} exercises',
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final count = Text(
+                                      '${day.exercises.length} ${day.exercises.length == 1 ? 'exercise' : 'exercises'}',
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodyMedium,
-                                    ),
-                                  ],
+                                    );
+                                    if (constraints.maxWidth < 320 ||
+                                        MediaQuery.textScalerOf(
+                                              context,
+                                            ).scale(14) >
+                                            20) {
+                                      return Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(day.name),
+                                          const SizedBox(height: 4),
+                                          count,
+                                        ],
+                                      );
+                                    }
+                                    return Row(
+                                      children: [
+                                        Expanded(child: Text(day.name)),
+                                        const SizedBox(width: 16),
+                                        count,
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                             const SizedBox(height: 12),

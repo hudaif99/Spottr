@@ -84,6 +84,88 @@ void main() {
     expect(saved?.name, 'My custom movement');
   });
 
+  testWidgets('keeps edits through keyboard and compact landscape changes', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 568);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    final original = Exercise(
+      id: 'custom',
+      name: 'Cable kickback',
+      note: 'Old note',
+      imageUrl: 'local-image',
+      targetSets: 3,
+      targetReps: 10,
+      targetWeight: 12.5,
+    );
+    Exercise? saved;
+    await openEditor(tester, (value) => saved = value, exercise: original);
+    await tester.enterText(find.byKey(const ValueKey('Sets')), '4');
+    await tester.enterText(find.byKey(const ValueKey('Reps')), '8');
+    await tester.enterText(find.byKey(const ValueKey('Weight · kg')), '22.5');
+    await tester.ensureVisible(find.byKey(const ValueKey('Setup note')));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byKey(const ValueKey('Setup note')),
+      'Pulley at knee level',
+    );
+    await tester.ensureVisible(find.text('Customize rest'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Customize rest'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const ValueKey('Rest · seconds')), '120');
+    tester.view.physicalSize = const Size(568, 320);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 180);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Save details'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Save details'));
+    await tester.pumpAndSettle();
+    expect(saved?.id, original.id);
+    expect(saved?.name, original.name);
+    expect(saved?.imageUrl, original.imageUrl);
+    expect(saved?.note, 'Pulley at knee level');
+    expect(saved?.targetSets, 4);
+    expect(saved?.targetReps, 8);
+    expect(saved?.targetWeight, 22.5);
+    expect(saved?.restDurationSeconds, 120);
+    expect(saved?.useDefaultRest, isFalse);
+    expect(original.note, 'Old note');
+  });
+
+  testWidgets(
+    'rejects invalid custom rest and allows returning to app default',
+    (tester) async {
+      Exercise? saved;
+      await openEditor(tester, (value) => saved = value);
+      await tester.enterText(find.byType(TextFormField).first, 'My exercise');
+      await tester.ensureVisible(find.text('Customize rest'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Customize rest'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('Rest · seconds')),
+        '-1',
+      );
+      await tester.tap(find.text('Add exercise'));
+      await tester.pumpAndSettle();
+      expect(saved, isNull);
+      expect(find.text('Use 0–1800'), findsOneWidget);
+      await tester.ensureVisible(find.text('Use app default rest'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Use app default rest'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add exercise'));
+      await tester.pumpAndSettle();
+      expect(saved?.useDefaultRest, isTrue);
+      expect(saved?.name, 'My exercise');
+    },
+  );
+
   testWidgets('keeps logged exercise names locked without suggestions', (
     tester,
   ) async {

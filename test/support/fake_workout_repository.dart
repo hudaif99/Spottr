@@ -16,6 +16,7 @@ class FakeWorkoutRepository implements WorkoutRepository {
   int concurrentWrites = 0;
   int maxConcurrentWrites = 0;
   Completer<void>? saveGate;
+  Completer<void>? planSaveGate;
   int defaultRestTime = 90;
   @override
   int getDefaultRestTime() => defaultRestTime;
@@ -62,6 +63,7 @@ class FakeWorkoutRepository implements WorkoutRepository {
       plans.where((plan) => plan.isActive).firstOrNull;
   @override
   Future<void> savePlan(Plan plan) async {
+    await planSaveGate?.future;
     if (failSave) throw StateError('Storage unavailable');
     plans.removeWhere((old) => old.id == plan.id);
     plans.add(plan);
