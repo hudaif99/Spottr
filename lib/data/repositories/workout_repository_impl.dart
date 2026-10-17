@@ -1,10 +1,7 @@
+import '../../domain/models/workout_models.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../datasources/local_database_service.dart';
-import '../models/exercise.dart';
-import '../models/plan.dart';
-import '../models/workout_log.dart';
-import '../models/active_workout.dart';
-import '../models/workout_schedule.dart';
+import '../mappers/workout_storage_mapper.dart';
 
 class WorkoutRepositoryImpl implements WorkoutRepository {
   final LocalDatabaseService _localDb;
@@ -12,97 +9,70 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   WorkoutRepositoryImpl(this._localDb);
 
   @override
-  Future<List<Plan>> getPlans() async {
-    return _localDb.getAllPlans();
-  }
+  Future<List<Plan>> getPlans() async =>
+      _localDb.getAllPlans().map((plan) => plan.toDomain()).toList();
 
   @override
-  Future<Plan?> getActivePlan() async {
-    final plans = _localDb.getAllPlans();
-    try {
-      return plans.firstWhere((p) => p.isActive);
-    } catch (e) {
-      return null; // No active plan found
-    }
-  }
+  Future<Plan?> getActivePlan() async => _localDb
+      .getAllPlans()
+      .where((plan) => plan.isActive)
+      .firstOrNull
+      ?.toDomain();
 
   @override
-  Future<void> savePlan(Plan plan) async {
-    await _localDb.savePlan(plan);
-  }
+  Future<void> savePlan(Plan plan) => _localDb.savePlan(plan.toStorage());
 
   @override
-  Future<void> deletePlan(String id) async {
-    await _localDb.deletePlan(id);
-  }
+  Future<void> deletePlan(String id) => _localDb.deletePlan(id);
 
   @override
   Future<void> setActivePlan(String id) async {
-    final plans = _localDb.getAllPlans();
-    for (var plan in plans) {
-      if (plan.id == id) {
-        if (!plan.isActive) {
-          await _localDb.savePlan(plan.copyWith(isActive: true));
-        }
-      } else {
-        if (plan.isActive) {
-          await _localDb.savePlan(plan.copyWith(isActive: false));
-        }
+    for (final plan in _localDb.getAllPlans()) {
+      final active = plan.id == id;
+      if (plan.isActive != active) {
+        await _localDb.savePlan(plan.copyWith(isActive: active));
       }
     }
   }
 
   @override
-  Future<List<Exercise>> getExercises() async {
-    return _localDb.getAllExercises();
-  }
+  Future<List<Exercise>> getExercises() async => _localDb
+      .getAllExercises()
+      .map((exercise) => exercise.toDomain())
+      .toList();
 
   @override
-  Future<void> saveExercise(Exercise exercise) async {
-    await _localDb.saveExercise(exercise);
-  }
+  Future<void> saveExercise(Exercise exercise) =>
+      _localDb.saveExercise(exercise.toStorage());
 
   @override
-  Future<void> deleteExercise(String id) async {
-    await _localDb.deleteExercise(id);
-  }
+  Future<void> deleteExercise(String id) => _localDb.deleteExercise(id);
 
   @override
-  Future<List<WorkoutLog>> getWorkoutLogs() async {
-    return _localDb.getAllWorkoutLogs();
-  }
+  Future<List<WorkoutLog>> getWorkoutLogs() async =>
+      _localDb.getAllWorkoutLogs().map((log) => log.toDomain()).toList();
 
   @override
-  Future<void> saveWorkoutLog(WorkoutLog log) async {
-    await _localDb.saveWorkoutLog(log);
-  }
+  Future<void> saveWorkoutLog(WorkoutLog log) =>
+      _localDb.saveWorkoutLog(log.toStorage());
 
   @override
-  Future<void> deleteWorkoutLog(String id) async {
-    await _localDb.deleteWorkoutLog(id);
-  }
-
-  // Active Workout Caching Methods
-  @override
-  ActiveWorkout? getActiveWorkout() {
-    return _localDb.getActiveWorkout();
-  }
+  Future<void> deleteWorkoutLog(String id) => _localDb.deleteWorkoutLog(id);
 
   @override
-  Future<void> saveActiveWorkout(ActiveWorkout workout) async {
-    await _localDb.saveActiveWorkout(workout);
-  }
+  ActiveWorkout? getActiveWorkout() => _localDb.getActiveWorkout()?.toDomain();
 
   @override
-  Future<void> clearActiveWorkout() async {
-    await _localDb.clearActiveWorkout();
-  }
+  Future<void> saveActiveWorkout(ActiveWorkout workout) =>
+      _localDb.saveActiveWorkout(workout.toStorage());
+
+  @override
+  Future<void> clearActiveWorkout() => _localDb.clearActiveWorkout();
 
   @override
   int getDefaultRestTime() => _localDb.getRestTime();
 
   @override
-  Future<WorkoutSchedule?> getScheduleForToday() async {
-    return _localDb.getWorkoutSchedule();
-  }
+  Future<WorkoutSchedule?> getScheduleForToday() async =>
+      _localDb.getWorkoutSchedule()?.toDomain();
 }

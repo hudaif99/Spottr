@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../data/models/set_log.dart';
+import '../../domain/models/set_log.dart';
 import 'workout_value_control.dart';
 
 class PreviousSetSummary extends StatelessWidget {

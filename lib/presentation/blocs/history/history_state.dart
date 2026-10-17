@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../../data/models/workout_log.dart';
+import '../../../domain/models/workout_log.dart';
 
 abstract class HistoryState extends Equatable {
   const HistoryState();

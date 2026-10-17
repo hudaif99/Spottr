@@ -4,7 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
 import '../../../core/theme/app_colors_extension.dart';
 import '../../../data/datasources/local_database_service.dart';
-import '../../../data/models/workout_schedule.dart';
+import '../../../domain/models/workout_schedule.dart';
 import '../../../notifications/notification_permission_handler.dart';
 import '../../blocs/schedule/schedule_bloc.dart';
 import '../../blocs/schedule/schedule_event.dart';

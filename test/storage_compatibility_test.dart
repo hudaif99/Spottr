@@ -8,6 +8,7 @@ import 'package:spottr/data/models/plan.dart';
 import 'package:spottr/data/models/set_log.dart';
 import 'package:spottr/data/models/workout_day.dart';
 import 'package:spottr/data/models/workout_log.dart';
+import 'package:spottr/data/repositories/workout_repository_impl.dart';
 
 class _ClassicExerciseAdapter extends ExerciseAdapter {
   @override
@@ -149,6 +150,23 @@ void main() {
       expect(database.getAllWorkoutLogs().single.exerciseNames, isEmpty);
       expect(database.getAllWorkoutLogs().single.totalVolume, 125);
       expect(database.getActiveWorkout()!.restUntil, isNull);
+      final repository = WorkoutRepositoryImpl(database);
+      final mappedPlan = (await repository.getPlans()).single;
+      final mappedLog = (await repository.getWorkoutLogs()).single;
+      final mappedActive = repository.getActiveWorkout()!;
+      expect(mappedPlan.days.single.exercises.single.note, '');
+      expect(mappedPlan.days.single.exercises.single.useDefaultRest, isTrue);
+      expect(mappedLog.exerciseNames, isEmpty);
+      expect(mappedLog.totalVolume, 125);
+      expect(mappedActive.exerciseLogs['exercise']!.single.id, 'set');
+      await repository.savePlan(mappedPlan);
+      await repository.saveWorkoutLog(mappedLog);
+      await repository.saveActiveWorkout(mappedActive);
+      await Hive.close();
+      await database.init(path: directory.path);
+      expect(database.getAllPlans().single.id, 'plan');
+      expect(database.getAllWorkoutLogs().single.totalVolume, 125);
+      expect(repository.getActiveWorkout()!.workoutLogId, 'current');
       final restUntil = date.add(const Duration(seconds: 90));
       await database.saveActiveWorkout(
         ActiveWorkout(

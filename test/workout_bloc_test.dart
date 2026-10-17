@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:spottr/data/models/exercise.dart';
-import 'package:spottr/data/models/plan.dart';
-import 'package:spottr/data/models/set_log.dart';
-import 'package:spottr/data/models/workout_day.dart';
-import 'package:spottr/data/models/workout_log.dart';
+import 'package:spottr/domain/models/exercise.dart';
+import 'package:spottr/domain/models/plan.dart';
+import 'package:spottr/domain/models/set_log.dart';
+import 'package:spottr/domain/models/workout_day.dart';
+import 'package:spottr/domain/models/workout_log.dart';
 import 'package:spottr/presentation/blocs/workout/workout_bloc.dart';
 import 'package:spottr/presentation/blocs/workout/workout_event.dart';
 import 'package:spottr/presentation/blocs/workout/workout_state.dart';

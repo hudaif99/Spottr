@@ -22,7 +22,8 @@ exercise IDs, images and existing targets remain supported. No storage format ch
 Settings now groups training, personal preferences and backup actions in readable rows.
 The default-rest sheet uses themed presets and a validated custom value. Rest saves are
 awaited; failures keep the last saved value. Existing backup services remain in use;
-backup validation/rollback and complete restore-state refresh are still later work.
+validated restore and complete state refresh were subsequently implemented in Phase 3;
+see [backup-restore.md](backup-restore.md) for validation and native-check limits.
 
 Onboarding keeps five steps with back navigation, scrollable content, accessible day
 selection and platform-specific time pickers. Reminders are enabled only after permission
@@ -97,7 +98,8 @@ Completed sets remain visible with undo. Suggested sets do not contribute to tot
 - New completed sessions save exercise names independently of future plan edits.
 - Active sessions save the rest deadline. Countdown and duration use wall clock time.
 - Shared catalog identity, replacement/reordering during sessions, and completed-session note snapshots remain for the next slice.
-- Existing Hive models remain at the storage boundary for this slice. Storage-independent application models still need to be extracted before expanding the catalog or adding a backend.
+- Phase 3 extracted storage-independent application models behind the repository boundary. Existing Hive
+  models and adapters remain in the data layer; see [storage-boundary.md](storage-boundary.md).
 - Defer detailed timed/bodyweight and superset interactions until the basic flow is reviewed.
 
 ## Implementation review

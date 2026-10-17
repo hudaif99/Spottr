@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors_extension.dart';
-import '../../data/models/workout_log.dart';
+import '../../domain/models/workout_log.dart';
 import '../../domain/history_summary.dart';
 import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_state.dart';

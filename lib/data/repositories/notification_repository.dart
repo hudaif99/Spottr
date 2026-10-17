@@ -1,5 +1,6 @@
 import '../../data/datasources/local_database_service.dart';
-import '../../data/models/workout_schedule.dart';
+import '../../domain/models/workout_schedule.dart';
+import '../mappers/workout_storage_mapper.dart';
 
 /// Abstract interface for schedule persistence.
 abstract class NotificationRepository {
@@ -15,11 +16,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
   NotificationRepositoryImpl(this._db);
 
   @override
-  WorkoutSchedule? getSchedule() => _db.getWorkoutSchedule();
+  WorkoutSchedule? getSchedule() => _db.getWorkoutSchedule()?.toDomain();
 
   @override
   Future<void> saveSchedule(WorkoutSchedule schedule) =>
-      _db.saveWorkoutSchedule(schedule);
+      _db.saveWorkoutSchedule(schedule.toStorage());
 
   @override
   Future<void> deleteSchedule() => _db.deleteWorkoutSchedule();

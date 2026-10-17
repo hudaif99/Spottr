@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
-import '../../data/models/exercise.dart';
+import '../../domain/models/exercise.dart';
 import '../../domain/exercise_name_suggestions.dart';
 import 'spottr_button.dart';
 

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../data/models/workout_schedule.dart';
+import '../../../domain/models/workout_schedule.dart';
 
 abstract class ScheduleEvent {}
 
 /// Load the persisted schedule from storage.
-class LoadSchedule extends ScheduleEvent {}
+class LoadSchedule extends ScheduleEvent {
+  final bool refreshReminders;
+  LoadSchedule({this.refreshReminders = false});
+}
 
 /// Persist a complete schedule and reschedule all notifications.
 class SaveSchedule extends ScheduleEvent {

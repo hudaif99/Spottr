@@ -1,7 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
-import '../data/models/workout_schedule.dart';
+import '../domain/models/workout_schedule.dart';
 import 'notification_ids.dart';
 import 'notification_service.dart';
 

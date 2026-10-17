@@ -1,8 +1,8 @@
 import 'dart:async';
-import 'package:spottr/data/models/active_workout.dart';
-import 'package:spottr/data/models/plan.dart';
-import 'package:spottr/data/models/workout_log.dart';
-import 'package:spottr/data/models/workout_schedule.dart';
+import 'package:spottr/domain/models/active_workout.dart';
+import 'package:spottr/domain/models/plan.dart';
+import 'package:spottr/domain/models/workout_log.dart';
+import 'package:spottr/domain/models/workout_schedule.dart';
 import 'package:spottr/domain/repositories/workout_repository.dart';
 
 class FakeWorkoutRepository implements WorkoutRepository {

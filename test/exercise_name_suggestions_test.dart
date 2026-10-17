@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:spottr/data/models/exercise.dart';
+import 'package:spottr/domain/models/exercise.dart';
 import 'package:spottr/domain/exercise_name_suggestions.dart';
 import 'package:spottr/presentation/widgets/exercise_editor.dart';
 

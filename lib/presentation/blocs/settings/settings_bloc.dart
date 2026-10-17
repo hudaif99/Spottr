@@ -16,6 +16,7 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   Future<void> _handle(SettingsEvent event, Emitter<SettingsState> emit) async {
     try {
       if (event is LoadSettings) {
+        emit(state.copyWith(isSaving: true));
         emit(
           state.copyWith(
             userName: _localDbService.getUserName(),

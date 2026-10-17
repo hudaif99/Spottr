@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../../data/models/set_log.dart';
-import '../../../data/models/workout_day.dart';
+import '../../../domain/models/set_log.dart';
+import '../../../domain/models/workout_day.dart';
 
 abstract class WorkoutState extends Equatable {
   const WorkoutState();
@@ -10,6 +10,8 @@ abstract class WorkoutState extends Equatable {
 }
 
 class WorkoutInitial extends WorkoutState {}
+
+class WorkoutRestoring extends WorkoutState {}
 
 class WorkoutInProgress extends WorkoutState {
   final String workoutLogId;
@@ -23,18 +25,19 @@ class WorkoutInProgress extends WorkoutState {
   final DateTime? restUntil;
   final bool completionPending;
 
-  const WorkoutInProgress({
+  WorkoutInProgress({
     required this.workoutLogId,
     required this.planId,
     required this.day,
     required this.startTime,
-    required this.exerciseLogs,
-    this.previousExerciseLogs = const {},
+    required Map<String, List<SetLog>> exerciseLogs,
+    Map<String, List<SetLog>> previousExerciseLogs = const {},
     this.isSaving = false,
     this.errorMessage,
     this.restUntil,
     this.completionPending = false,
-  });
+  }) : exerciseLogs = immutableSetLogs(exerciseLogs),
+       previousExerciseLogs = immutableSetLogs(previousExerciseLogs);
 
   WorkoutInProgress copyWith({
     String? workoutLogId,

@@ -13,7 +13,7 @@
 | --- | --- | --- | --- |
 | 1. Setup | Preserve app, create branch, add project guidance | Branch references and documentation verified | Complete |
 | 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Implementation reviewed; user/native-device sign-off pending |
-| 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Session reliability and visual tokens implemented; model extraction remains |
+| 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | In progress: model boundary, validated backups and restore recovery implemented |
 | 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | First implementation slice; catalog and session replacement remain |
 | 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Session details implemented; remaining work planned |
 | 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Planned |
@@ -122,6 +122,36 @@ Shared exercise identity, session replacement/reordering, trends and record defi
 remain future work. Timed/bodyweight, dedicated warm-up/drop-set and supersets need
 separate product decisions. Preserve current recovery, persistence and Hive contracts.
 
+## Phase 3 foundation
+
+### Model and storage boundary — 17 October 2026
+
+- Extracted plain Dart models for exercises, sets, days, plans, history, active workouts and schedules.
+- Moved app consumers and repository contracts to those models; repositories map to existing Hive objects.
+- Copied and protected nested collections in app models and workout state to prevent accidental mutation.
+- Kept all Hive type/field IDs, generated adapters, box keys and stored formats unchanged.
+- Added real-disk round trips, repository operations, classic-data mapping and BLoC reopen/resume/finish/cancel checks.
+- Verification: all 69 tests passed; formatting and analysis of all 41 changed/new Dart files passed.
+  Wider app/test analysis retains eight informational notices in untouched files. Native builds and
+  physical-device recovery were not run. Hive models and generated adapter files have no diff.
+- See [storage-boundary.md](storage-boundary.md) for ownership and compatibility rules.
+- Phase 3 remains in progress. Stable exercise identity and safe backup/restore remain separate work;
+  no backend SDK or catalog migration was added. Phase 2 native/user sign-off is still open.
+
+### Validated backup and restore — 17 October 2026
+
+- Exported only known database files with portable names and a versioned manifest; retained compatible flat legacy ZIPs.
+- Validated archive structure, checksums, limits, Hive data and settings before touching live files.
+- Added a write barrier, rollback journal, startup recovery and cleanup that cannot trigger a later rollback.
+- Added replacement confirmation and active-workout protection; refreshes plans, history, settings, schedule,
+  rest defaults and imported sessions. Reminder failures retry separately without repeating the restore.
+- Exports reopen storage before sharing, handle cancellation and provide an iPad share anchor.
+- Full-suite and focused failure validation are recorded in [backup-restore.md](backup-restore.md).
+- Verification: all 89 tests passed; formatting and analysis of all 49 pending Dart files passed.
+  Reviewed the actual confirmation at compact width, dark theme and 1.8x text scaling.
+- Native pickers/sharing, notification delivery, actual process interruption and iOS builds remain release checks.
+- Next Phase 3 slice: stable exercise identity across plans, with a separately reviewed data migration.
+
 ## Reliability backlog from the initial source review
 
 Recheck these paths before fixing them; findings below are not device reproductions.
@@ -131,8 +161,8 @@ Recheck these paths before fixing them; findings below are not device reproducti
 | Unawaited session updates and clear-then-add persistence can overlap | 3 |
 | Finish with no completed sets leaves the active cache behind | 3 |
 | Finish closes the screen before saving succeeds | 4 |
-| Backup restore lacks full validation, path containment, and rollback | 3 / 5 |
-| Restore refreshes plans/history but leaves other state and reminders stale | 5 |
+| Backup restore validation, path containment and rollback | Implemented in Phase 3; native interruption checks remain |
+| Restore refreshes app state and reminders | Implemented in Phase 3; native permission/delivery checks remain |
 | Exercise identity is scoped to plan entries, fragmenting progress | 3 |
 | Timers lack lifecycle reconciliation; stopwatch is not started | 4 |
 | Reminder offsets crossing midnight retain the wrong weekday | 5 |

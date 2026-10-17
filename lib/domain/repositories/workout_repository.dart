@@ -1,8 +1,8 @@
-import '../../data/models/plan.dart';
-import '../../data/models/workout_log.dart';
-import '../../data/models/exercise.dart';
-import '../../data/models/active_workout.dart';
-import '../../data/models/workout_schedule.dart';
+import '../models/plan.dart';
+import '../models/workout_log.dart';
+import '../models/exercise.dart';
+import '../models/active_workout.dart';
+import '../models/workout_schedule.dart';
 
 abstract class WorkoutRepository {
   // Plans

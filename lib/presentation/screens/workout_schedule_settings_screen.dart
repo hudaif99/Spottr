@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get_it/get_it.dart';
-import '../../data/models/workout_schedule.dart';
+import '../../domain/models/workout_schedule.dart';
 import '../../notifications/notification_permission_handler.dart';
 import '../blocs/schedule/schedule_bloc.dart';
 import '../blocs/schedule/schedule_event.dart';
@@ -29,7 +29,10 @@ class _WorkoutScheduleSettingsScreenState
   static const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   Future<void> _editTime(WorkoutSchedule schedule) async {
-    final time = await showWorkoutTimePicker(context, schedule.workoutTime);
+    final time = await showWorkoutTimePicker(
+      context,
+      TimeOfDay(hour: schedule.workoutHour, minute: schedule.workoutMinute),
+    );
     if (time != null && mounted) {
       context.read<ScheduleBloc>().add(UpdateWorkoutTime(time));
     }
@@ -157,7 +160,7 @@ class _WorkoutScheduleSettingsScreenState
                           onPressed: () {
                             context.read<ScheduleBloc>().add(
                               state.retrySchedule == null
-                                  ? LoadSchedule()
+                                  ? LoadSchedule(refreshReminders: true)
                                   : SaveSchedule(state.retrySchedule!),
                             );
                           },
@@ -193,7 +196,12 @@ class _WorkoutScheduleSettingsScreenState
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.schedule_rounded),
                         title: const Text('Workout time'),
-                        subtitle: Text(schedule.workoutTime.format(context)),
+                        subtitle: Text(
+                          TimeOfDay(
+                            hour: schedule.workoutHour,
+                            minute: schedule.workoutMinute,
+                          ).format(context),
+                        ),
                         trailing: const Icon(Icons.chevron_right_rounded),
                         onTap: busy ? null : () => _editTime(schedule),
                       ),

@@ -1,8 +1,8 @@
 import 'package:equatable/equatable.dart';
-import '../../../data/models/plan.dart';
-import '../../../data/models/workout_day.dart';
-import '../../../data/models/set_log.dart';
-import '../../../data/models/exercise.dart';
+import '../../../domain/models/plan.dart';
+import '../../../domain/models/workout_day.dart';
+import '../../../domain/models/set_log.dart';
+import '../../../domain/models/exercise.dart';
 
 abstract class WorkoutEvent extends Equatable {
   const WorkoutEvent();

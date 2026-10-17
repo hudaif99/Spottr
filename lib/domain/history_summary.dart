@@ -1,4 +1,4 @@
-import '../data/models/workout_log.dart';
+import 'models/workout_log.dart';
 
 class HistorySummary {
   final int workouts;

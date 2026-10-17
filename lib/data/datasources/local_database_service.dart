@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'backup_file_transaction.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../models/exercise.dart';
 import '../models/plan.dart';
@@ -8,6 +11,35 @@ import '../models/active_workout.dart';
 import '../models/workout_schedule.dart';
 
 class LocalDatabaseService {
+  Future<void> _writes = Future.value();
+  bool _maintenance = false;
+  bool _available = true;
+  late Directory directory;
+
+  Future<void> _write(Future<void> Function() action) {
+    if (_maintenance || !_available) {
+      return Future.error(StateError('Database maintenance is in progress.'));
+    }
+    final next = _writes.then((_) => action());
+    _writes = next.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    return next;
+  }
+
+  Future<T> maintenance<T>(Future<T> Function() action) async {
+    if (_maintenance || !_available) {
+      throw StateError('Database is unavailable.');
+    }
+    _maintenance = true;
+    try {
+      await _writes;
+      return await action();
+    } finally {
+      _maintenance = false;
+    }
+  }
+
+  void markUnavailable() => _available = false;
+
   static const String _plansBoxName = 'plans_box';
   static const String _exercisesBoxName = 'exercises_box';
   static const String _workoutLogsBoxName = 'workout_logs_box';
@@ -24,11 +56,13 @@ class LocalDatabaseService {
   late Box<dynamic> _settingsBox;
 
   Future<void> init({String? path}) async {
-    if (path == null) {
-      await Hive.initFlutter();
-    } else {
-      Hive.init(path);
-    }
+    directory = Directory(
+      path ?? (await getApplicationDocumentsDirectory()).path,
+    );
+    await directory.create(recursive: true);
+    await BackupFileTransaction(directory).recover();
+    Hive.init(directory.path);
+    _available = true;
 
     // Register Adapters
     if (!Hive.isAdapterRegistered(0)) {
@@ -69,22 +103,25 @@ class LocalDatabaseService {
   // --- Plans ---
   List<Plan> getAllPlans() => _plansBox.values.toList();
   Plan? getPlan(String id) => _plansBox.get(id);
-  Future<void> savePlan(Plan plan) => _plansBox.put(plan.id, plan);
-  Future<void> deletePlan(String id) => _plansBox.delete(id);
+  Future<void> savePlan(Plan plan) =>
+      _write(() => _plansBox.put(plan.id, plan));
+  Future<void> deletePlan(String id) => _write(() => _plansBox.delete(id));
 
   // --- Exercises ---
   List<Exercise> getAllExercises() => _exercisesBox.values.toList();
   Exercise? getExercise(String id) => _exercisesBox.get(id);
   Future<void> saveExercise(Exercise exercise) =>
-      _exercisesBox.put(exercise.id, exercise);
-  Future<void> deleteExercise(String id) => _exercisesBox.delete(id);
+      _write(() => _exercisesBox.put(exercise.id, exercise));
+  Future<void> deleteExercise(String id) =>
+      _write(() => _exercisesBox.delete(id));
 
   // --- Workout Logs ---
   List<WorkoutLog> getAllWorkoutLogs() => _workoutLogsBox.values.toList();
   WorkoutLog? getWorkoutLog(String id) => _workoutLogsBox.get(id);
   Future<void> saveWorkoutLog(WorkoutLog log) =>
-      _workoutLogsBox.put(log.id, log);
-  Future<void> deleteWorkoutLog(String id) => _workoutLogsBox.delete(id);
+      _write(() => _workoutLogsBox.put(log.id, log));
+  Future<void> deleteWorkoutLog(String id) =>
+      _write(() => _workoutLogsBox.delete(id));
 
   // --- Active Workout Cache ---
   ActiveWorkout? getActiveWorkout() {
@@ -93,11 +130,11 @@ class LocalDatabaseService {
   }
 
   Future<void> saveActiveWorkout(ActiveWorkout workout) async {
-    await _activeWorkoutBox.put('current', workout);
+    await _write(() => _activeWorkoutBox.put('current', workout));
   }
 
   Future<void> clearActiveWorkout() async {
-    await _activeWorkoutBox.clear();
+    await _write(() => _activeWorkoutBox.clear());
   }
 
   // --- Settings ---
@@ -106,7 +143,7 @@ class LocalDatabaseService {
   }
 
   Future<void> saveRestTime(int seconds) async {
-    await _settingsBox.put('rest_time', seconds);
+    await _write(() => _settingsBox.put('rest_time', seconds));
   }
 
   // --- Profile & Appearance ---
@@ -116,48 +153,51 @@ class LocalDatabaseService {
     String? gender,
     double? height,
     double? weight,
-  }) => _settingsBox.putAll({
-    'user_name': name,
-    'user_age': age,
-    'user_height': height,
-    'user_weight': weight,
-    'user_gender': ?gender,
-  });
+  }) => _write(
+    () => _settingsBox.putAll({
+      'user_name': name,
+      'user_age': age,
+      'user_height': height,
+      'user_weight': weight,
+      'user_gender': ?gender,
+    }),
+  );
 
   String? getUserName() => _settingsBox.get('user_name') as String?;
   Future<void> saveUserName(String name) async =>
-      _settingsBox.put('user_name', name);
+      _write(() => _settingsBox.put('user_name', name));
 
   int? getUserAge() => _settingsBox.get('user_age') as int?;
-  Future<void> saveUserAge(int age) async => _settingsBox.put('user_age', age);
+  Future<void> saveUserAge(int age) async =>
+      _write(() => _settingsBox.put('user_age', age));
 
   String? getUserGender() => _settingsBox.get('user_gender') as String?;
   Future<void> saveUserGender(String gender) async =>
-      _settingsBox.put('user_gender', gender);
+      _write(() => _settingsBox.put('user_gender', gender));
 
   double? getUserHeight() => _settingsBox.get('user_height') as double?;
   Future<void> saveUserHeight(double height) async =>
-      _settingsBox.put('user_height', height);
+      _write(() => _settingsBox.put('user_height', height));
 
   double? getUserWeight() => _settingsBox.get('user_weight') as double?;
   Future<void> saveUserWeight(double weight) async =>
-      _settingsBox.put('user_weight', weight);
+      _write(() => _settingsBox.put('user_weight', weight));
 
   String getThemeMode() =>
       _settingsBox.get('theme_mode', defaultValue: 'system') as String;
   Future<void> saveThemeMode(String mode) async =>
-      _settingsBox.put('theme_mode', mode);
+      _write(() => _settingsBox.put('theme_mode', mode));
 
   // --- Workout Preferences ---
   bool getKeepScreenAwake() =>
       _settingsBox.get('keep_screen_awake', defaultValue: true) as bool;
   Future<void> saveKeepScreenAwake(bool keepAwake) async =>
-      _settingsBox.put('keep_screen_awake', keepAwake);
+      _write(() => _settingsBox.put('keep_screen_awake', keepAwake));
 
   bool getPlayTimerSound() =>
       _settingsBox.get('play_timer_sound', defaultValue: true) as bool;
   Future<void> savePlayTimerSound(bool playSound) async =>
-      _settingsBox.put('play_timer_sound', playSound);
+      _write(() => _settingsBox.put('play_timer_sound', playSound));
 
   // --- Workout Schedule ---
 
@@ -168,11 +208,11 @@ class LocalDatabaseService {
   }
 
   Future<void> saveWorkoutSchedule(WorkoutSchedule schedule) async {
-    await _workoutScheduleBox.put('current', schedule);
+    await _write(() => _workoutScheduleBox.put('current', schedule));
   }
 
   Future<void> deleteWorkoutSchedule() async {
-    await _workoutScheduleBox.clear();
+    await _write(() => _workoutScheduleBox.clear());
   }
 
   // --- Onboarding ---
@@ -181,7 +221,7 @@ class LocalDatabaseService {
       _settingsBox.get('onboarding_completed', defaultValue: false) as bool;
 
   Future<void> setOnboardingCompleted() async =>
-      _settingsBox.put('onboarding_completed', true);
+      _write(() => _settingsBox.put('onboarding_completed', true));
 
   // --- Database Lifecycle (For Backup/Restore) ---
   Future<void> closeAll() async {

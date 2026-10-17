@@ -1,9 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uuid/uuid.dart';
-import '../../../data/models/active_workout.dart';
-import '../../../data/models/exercise.dart';
-import '../../../data/models/set_log.dart';
-import '../../../data/models/workout_log.dart';
+import '../../../domain/models/active_workout.dart';
+import '../../../domain/models/exercise.dart';
+import '../../../domain/models/set_log.dart';
+import '../../../domain/models/workout_log.dart';
 import '../../../domain/repositories/workout_repository.dart';
 import '../../../notifications/workout_reminder_scheduler.dart';
 import 'workout_event.dart';
@@ -71,8 +71,12 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
   ) async {
     final event = _resolveSetChange(incoming);
     if (event is ResumeWorkout) {
+      emit(WorkoutRestoring());
       final cached = _repository.getActiveWorkout();
-      if (cached == null) return;
+      if (cached == null) {
+        emit(WorkoutInitial());
+        return;
+      }
       bool completionPending = false;
       try {
         final logs = await _repository.getWorkoutLogs();

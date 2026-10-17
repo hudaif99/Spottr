@@ -1,5 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../data/models/workout_schedule.dart';
+import '../../../domain/models/workout_schedule.dart';
 import '../../../data/repositories/notification_repository.dart';
 import '../../../notifications/workout_reminder_scheduler.dart';
 import 'schedule_event.dart';
@@ -25,8 +25,30 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
 
   Future<void> _handle(ScheduleEvent event, Emitter<ScheduleState> emit) async {
     if (event is LoadSchedule) {
+      if (event.refreshReminders) emit(ScheduleSaving(_schedule));
       try {
-        emit(ScheduleLoaded(_repo.getSchedule()));
+        final schedule = _repo.getSchedule();
+        if (event.refreshReminders) {
+          try {
+            if (schedule != null) {
+              await _scheduler.rescheduleAll(schedule);
+            } else {
+              await _scheduler.cancelWorkoutReminders();
+              await _scheduler.cancelStreakReminder();
+              await _scheduler.cancelWeeklySummary();
+            }
+          } catch (_) {
+            emit(
+              ScheduleError(
+                'Data restored, but reminders could not update. Retry.',
+                schedule: schedule,
+                retrySchedule: schedule,
+              ),
+            );
+            return;
+          }
+        }
+        emit(ScheduleLoaded(schedule));
       } catch (_) {
         emit(
           ScheduleError('Could not load your schedule.', schedule: _schedule),

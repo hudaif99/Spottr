@@ -7,6 +7,18 @@ import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
 import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_event.dart';
+import '../blocs/history/history_state.dart';
+import '../blocs/plans/plans_state.dart';
+import '../blocs/settings/settings_bloc.dart';
+import '../blocs/settings/settings_event.dart';
+import '../blocs/schedule/schedule_bloc.dart';
+import '../blocs/schedule/schedule_event.dart';
+import '../blocs/schedule/schedule_state.dart';
+import '../blocs/workout/workout_bloc.dart';
+import '../blocs/workout/workout_event.dart';
+import '../blocs/workout/workout_state.dart';
+import '../blocs/timer/timer_bloc.dart';
+import '../blocs/timer/timer_event.dart';
 import '../widgets/spottr_button.dart';
 import 'profile_appearance_screen.dart';
 import 'workout_preferences_screen.dart';
@@ -20,6 +32,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool _busy = false;
+  bool _backupPending = false;
   late int _restTime = GetIt.I<LocalDatabaseService>().getRestTime();
 
   void _message(String text) {
@@ -49,21 +62,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _backup(bool restore) async {
-    setState(() => _busy = true);
+    if (_busy || _backupPending) return;
+    if (restore && context.read<WorkoutBloc>().state is WorkoutInProgress) {
+      _message(
+        'Finish or discard your current workout before restoring a backup.',
+      );
+      return;
+    }
+    _backupPending = true;
     try {
+      if (restore) {
+        final confirmed = await showAdaptiveDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog.adaptive(
+            scrollable: true,
+            title: const Text('Replace current data?'),
+            content: const Text(
+              'Restoring replaces your plans, history, settings and saved session with the backup. You can export a copy first.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Choose backup'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true || !mounted) return;
+      }
+      setState(() => _busy = true);
+      context.read<TimerBloc>().add(ResetTimer());
+      final box = context.findRenderObject() as RenderBox?;
+      final origin = box == null
+          ? null
+          : Rect.fromCenter(
+              center: box.localToGlobal(box.size.center(Offset.zero)),
+              width: 1,
+              height: 1,
+            );
       final service = GetIt.I<BackupRestoreService>();
       final error = restore
           ? await service.importData()
-          : await service.exportData();
+          : await service.exportData(sharePositionOrigin: origin);
       if (!mounted) return;
       if (error != null) {
         _message(error);
       } else {
         if (restore) {
-          context.read<PlansBloc>().add(LoadPlans());
-          context.read<HistoryBloc>().add(LoadHistory());
+          await _refreshAfterRestore();
+        } else {
+          _message('Backup shared.');
         }
-        _message(restore ? 'Backup restored.' : 'Backup exported.');
       }
     } catch (_) {
       _message(
@@ -72,8 +125,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
             : 'Could not export backup. Try again.',
       );
     } finally {
+      _backupPending = false;
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _refreshAfterRestore() async {
+    final plans = context.read<PlansBloc>();
+    final history = context.read<HistoryBloc>();
+    final settings = context.read<SettingsBloc>();
+    final schedule = context.read<ScheduleBloc>();
+    final workout = context.read<WorkoutBloc>();
+    final ready = Future.wait<Object>([
+      plans.stream.firstWhere(
+        (state) => state is PlansLoaded || state is PlansError,
+      ),
+      history.stream.firstWhere(
+        (state) => state is HistoryLoaded || state is HistoryError,
+      ),
+      settings.stream.firstWhere((state) => !state.isSaving),
+      schedule.stream.firstWhere(
+        (state) => state is ScheduleLoaded || state is ScheduleError,
+      ),
+      workout.stream.firstWhere(
+        (state) =>
+            state is WorkoutInitial ||
+            state is WorkoutError ||
+            state is WorkoutInProgress,
+      ),
+    ]);
+    plans.add(LoadPlans());
+    history.add(LoadHistory());
+    settings.add(LoadSettings());
+    schedule.add(LoadSchedule(refreshReminders: true));
+    workout.add(ResumeWorkout());
+    final states = await ready;
+    if (!mounted) return;
+    setState(() => _restTime = GetIt.I<LocalDatabaseService>().getRestTime());
+    final failed =
+        states.any(
+          (state) =>
+              state is PlansError ||
+              state is HistoryError ||
+              state is WorkoutError,
+        ) ||
+        settings.state.errorMessage != null;
+    _message(
+      failed
+          ? 'Backup restored. Some screens could not refresh. Reopen Spottr before continuing.'
+          : schedule.state is ScheduleError
+          ? 'Backup restored. Open Workout schedule to retry reminder updates.'
+          : 'Backup restored.',
+    );
   }
 
   void _showBackup() => showModalBottomSheet<void>(

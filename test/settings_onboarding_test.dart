@@ -10,15 +10,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:get_it/get_it.dart';
 import 'package:spottr/core/theme/app_theme.dart';
 import 'package:spottr/data/datasources/local_database_service.dart';
-import 'package:spottr/data/models/workout_schedule.dart';
+import 'package:spottr/domain/models/workout_models.dart';
+import 'package:spottr/data/datasources/backup_restore_service.dart';
 import 'package:spottr/data/repositories/notification_repository.dart';
 import 'package:spottr/notifications/notification_permission_handler.dart';
 import 'package:spottr/notifications/notification_service.dart';
 import 'package:spottr/notifications/workout_reminder_scheduler.dart';
 import 'package:spottr/presentation/blocs/history/history_bloc.dart';
 import 'package:spottr/presentation/blocs/history/history_event.dart';
+import 'package:spottr/presentation/blocs/history/history_state.dart';
 import 'package:spottr/presentation/blocs/plans/plans_bloc.dart';
 import 'package:spottr/presentation/blocs/plans/plans_event.dart';
+import 'package:spottr/presentation/blocs/plans/plans_state.dart';
 import 'package:spottr/presentation/blocs/schedule/schedule_bloc.dart';
 import 'package:spottr/presentation/blocs/schedule/schedule_event.dart';
 import 'package:spottr/presentation/blocs/schedule/schedule_state.dart';
@@ -27,6 +30,7 @@ import 'package:spottr/presentation/screens/profile_appearance_screen.dart';
 import 'package:spottr/presentation/screens/workout_schedule_settings_screen.dart';
 import 'package:spottr/presentation/blocs/timer/timer_bloc.dart';
 import 'package:spottr/presentation/blocs/workout/workout_bloc.dart';
+import 'package:spottr/presentation/blocs/workout/workout_state.dart';
 import 'package:spottr/presentation/screens/settings_screen.dart';
 import 'package:spottr/presentation/screens/workout_preferences_screen.dart';
 import 'package:spottr/presentation/screens/onboarding/onboarding_flow_screen.dart';
@@ -48,6 +52,22 @@ class _Preferences extends LocalDatabaseService {
   double? height;
   double? weight;
   String theme = 'system';
+  @override
+  String? getUserName() => name;
+  @override
+  int? getUserAge() => age;
+  @override
+  String? getUserGender() => null;
+  @override
+  double? getUserHeight() => height;
+  @override
+  double? getUserWeight() => weight;
+  @override
+  String getThemeMode() => theme;
+  @override
+  bool getKeepScreenAwake() => awake ?? true;
+  @override
+  bool getPlayTimerSound() => sound ?? false;
   @override
   Future<void> saveProfile({
     String? name,
@@ -106,10 +126,52 @@ class _ScheduleRepository implements NotificationRepository {
 
 class _Scheduler extends WorkoutReminderScheduler {
   bool fail = false;
+  int refreshes = 0;
+  int cancellations = 0;
+  Completer<void>? refreshGate;
   _Scheduler() : super(NotificationService());
   @override
   Future<void> rescheduleAll(WorkoutSchedule schedule) async {
+    refreshes++;
+    await refreshGate?.future;
     if (fail) throw StateError('Notification service unavailable');
+  }
+
+  @override
+  Future<void> cancelWorkoutReminders() async {
+    cancellations++;
+  }
+
+  @override
+  Future<void> cancelStreakReminder() async {
+    cancellations++;
+  }
+
+  @override
+  Future<void> cancelWeeklySummary() async {
+    cancellations++;
+  }
+}
+
+class _Backup extends BackupRestoreService {
+  int imports = 0;
+  Completer<void>? gate;
+  void Function()? restore;
+  String? error;
+  Rect? shareOrigin;
+  _Backup(super.database);
+  @override
+  Future<String?> exportData({Rect? sharePositionOrigin}) async {
+    shareOrigin = sharePositionOrigin;
+    return null;
+  }
+
+  @override
+  Future<String?> importData() async {
+    imports++;
+    await gate?.future;
+    if (error == null) restore?.call();
+    return error;
   }
 }
 
@@ -159,12 +221,13 @@ void main() {
     double scale = 1,
     bool dark = false,
     bool ios = false,
+    FakeWorkoutRepository? repository,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final workouts = FakeWorkoutRepository();
+    final workouts = repository ?? FakeWorkoutRepository();
     final settings = SettingsBloc(prefs);
     final schedule = ScheduleBloc(schedules, reminderScheduler)
       ..add(LoadSchedule());
@@ -177,6 +240,7 @@ void main() {
         prefs.restGate,
         prefs.profileGate,
         schedules.saveGate,
+        reminderScheduler.refreshGate,
       ]) {
         if (gate != null && !gate.isCompleted) gate.complete();
       }
@@ -625,6 +689,198 @@ void main() {
         findsNothing,
       );
       expect(schedules.schedule!.workoutDays, [1, 3]);
+    },
+  );
+
+  testWidgets('restore confirmation can cancel without opening the picker', (
+    tester,
+  ) async {
+    final backup = _Backup(prefs);
+    GetIt.I.registerSingleton<BackupRestoreService>(backup);
+    await mount(
+      tester,
+      const SettingsScreen(),
+      size: const Size(320, 568),
+      scale: 1.8,
+      dark: true,
+    );
+    await tester.scrollUntilVisible(find.text('Backup and restore'), 200);
+    await tap(tester, find.text('Backup and restore'));
+    await tap(tester, find.text('Restore backup'));
+    expect(find.text('Replace current data?'), findsOneWidget);
+    await capture(tester, 'restore-confirmation-large-text-dark');
+    await tap(tester, find.text('Cancel'));
+    expect(backup.imports, 0);
+    expect(find.text('Backup restored.'), findsNothing);
+    await tap(tester, find.text('Backup and restore'));
+    await tap(tester, find.text('Export backup'));
+    expect(backup.shareOrigin?.isEmpty, isFalse);
+    expect(find.text('Backup shared.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('restore refreshes every screen and waits for reminder updates', (
+    tester,
+  ) async {
+    final repository = FakeWorkoutRepository();
+    final backup = _Backup(prefs)..gate = Completer<void>();
+    GetIt.I.registerSingleton<BackupRestoreService>(backup);
+    await mount(tester, const SettingsScreen(), repository: repository);
+    reminderScheduler.refreshGate = Completer<void>();
+    addTearDown(() {
+      if (!backup.gate!.isCompleted) backup.gate!.complete();
+      if (!reminderScheduler.refreshGate!.isCompleted) {
+        reminderScheduler.refreshGate!.complete();
+      }
+    });
+    final date = DateTime(2026, 10, 17);
+    final day = WorkoutDay(
+      id: 'day',
+      name: 'Restored day',
+      exercises: [Exercise(id: 'exercise', name: 'Squat')],
+    );
+    backup.restore = () {
+      prefs.rest = 150;
+      prefs.name = 'Restored name';
+      prefs.theme = 'dark';
+      repository.plans.add(
+        Plan(id: 'plan', name: 'Restored routine', days: [day]),
+      );
+      repository.logs.add(
+        WorkoutLog(
+          id: 'history',
+          planId: 'plan',
+          dayId: 'day',
+          dayName: day.name,
+          startTime: date,
+        ),
+      );
+      repository.active = ActiveWorkout(
+        workoutLogId: 'restored-active',
+        planId: 'plan',
+        day: day,
+        startTime: date,
+        exerciseLogs: {},
+      );
+      schedules.schedule = WorkoutSchedule(
+        workoutHour: 18,
+        workoutMinute: 0,
+        workoutDays: [2, 4],
+        remindersEnabled: false,
+      );
+    };
+    await tap(tester, find.text('Backup and restore'));
+    await tap(tester, find.text('Restore backup'));
+    await tester.tap(find.text('Choose backup'));
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(backup.imports, 1);
+    expect(find.text('Backup restored.'), findsNothing);
+    backup.gate!.complete();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(find.text('Backup restored.'), findsNothing);
+    reminderScheduler.refreshGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Backup restored.'), findsOneWidget);
+    final context = tester.element(find.byType(SettingsScreen));
+    expect(
+      (context.read<PlansBloc>().state as PlansLoaded).plans.single.name,
+      'Restored routine',
+    );
+    expect(
+      (context.read<HistoryBloc>().state as HistoryLoaded).logs,
+      hasLength(1),
+    );
+    expect(context.read<SettingsBloc>().state.userName, 'Restored name');
+    expect(context.read<SettingsBloc>().state.themeMode, 'dark');
+    expect(
+      (context.read<ScheduleBloc>().state as ScheduleLoaded)
+          .schedule!
+          .workoutDays,
+      [2, 4],
+    );
+    expect(context.read<WorkoutBloc>().state, isA<WorkoutInProgress>());
+    await tester.ensureVisible(find.text('150 seconds between sets'));
+    expect(reminderScheduler.refreshes, 1);
+    await tester.scrollUntilVisible(find.text('Backup and restore'), 200);
+    await tap(tester, find.text('Backup and restore'));
+    await tap(tester, find.text('Restore backup'));
+    expect(
+      find.text(
+        'Finish or discard your current workout before restoring a backup.',
+      ),
+      findsOneWidget,
+    );
+    expect(backup.imports, 1);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'failed restore keeps state and a restored empty schedule cancels old reminders',
+    (tester) async {
+      final backup = _Backup(prefs)..error = 'This backup is incomplete.';
+      GetIt.I.registerSingleton<BackupRestoreService>(backup);
+      schedules.schedule = WorkoutSchedule(
+        workoutHour: 6,
+        workoutMinute: 0,
+        workoutDays: [1],
+      );
+      await mount(tester, const SettingsScreen());
+      Future<void> restore() async {
+        await tap(tester, find.text('Backup and restore'));
+        await tap(tester, find.text('Restore backup'));
+        await tap(tester, find.text('Choose backup'));
+      }
+
+      await restore();
+      expect(find.text('This backup is incomplete.'), findsOneWidget);
+      expect(schedules.schedule, isNotNull);
+      expect(reminderScheduler.cancellations, 0);
+      backup.error = null;
+      backup.restore = () => schedules.schedule = null;
+      await restore();
+      expect(find.text('Backup restored.'), findsOneWidget);
+      expect(reminderScheduler.cancellations, 3);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'restored data survives reminder failure and schedule retries independently',
+    (tester) async {
+      final backup = _Backup(prefs)
+        ..restore = () {
+          prefs.rest = 180;
+          schedules.schedule = WorkoutSchedule(
+            workoutHour: 18,
+            workoutMinute: 0,
+            workoutDays: [1],
+            remindersEnabled: false,
+          );
+        };
+      GetIt.I.registerSingleton<BackupRestoreService>(backup);
+      await mount(tester, const SettingsScreen());
+      reminderScheduler.fail = true;
+      await tap(tester, find.text('Backup and restore'));
+      await tap(tester, find.text('Restore backup'));
+      await tap(tester, find.text('Choose backup'));
+      expect(
+        find.text(
+          'Backup restored. Open Workout schedule to retry reminder updates.',
+        ),
+        findsOneWidget,
+      );
+      expect(prefs.rest, 180);
+      reminderScheduler.fail = false;
+      await tester.scrollUntilVisible(find.text('Workout schedule'), -200);
+      await tap(tester, find.text('Workout schedule'));
+      await tap(tester, find.text('Retry'));
+      final context = tester.element(
+        find.byType(WorkoutScheduleSettingsScreen),
+      );
+      expect(context.read<ScheduleBloc>().state, isA<ScheduleLoaded>());
+      expect(backup.imports, 1);
+      expect(reminderScheduler.refreshes, 2);
     },
   );
 

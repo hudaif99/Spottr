@@ -1,6 +1,6 @@
-import '../data/models/plan.dart';
-import '../data/models/workout_day.dart';
-import '../data/models/workout_log.dart';
+import 'models/plan.dart';
+import 'models/workout_day.dart';
+import 'models/workout_log.dart';
 
 WorkoutDay? nextWorkoutDay(Plan plan, List<WorkoutLog> history) {
   if (plan.days.isEmpty) return null;
