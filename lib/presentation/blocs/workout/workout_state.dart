@@ -24,6 +24,8 @@ class WorkoutInProgress extends WorkoutState {
   final String? errorMessage;
   final DateTime? restUntil;
   final bool completionPending;
+  final bool historyCheckPending;
+  bool get isReadOnly => completionPending || historyCheckPending;
 
   WorkoutInProgress({
     required this.workoutLogId,
@@ -36,6 +38,7 @@ class WorkoutInProgress extends WorkoutState {
     this.errorMessage,
     this.restUntil,
     this.completionPending = false,
+    this.historyCheckPending = false,
   }) : exerciseLogs = immutableSetLogs(exerciseLogs),
        previousExerciseLogs = immutableSetLogs(previousExerciseLogs);
 
@@ -51,6 +54,7 @@ class WorkoutInProgress extends WorkoutState {
     DateTime? restUntil,
     bool clearRest = false,
     bool? completionPending,
+    bool? historyCheckPending,
   }) {
     return WorkoutInProgress(
       workoutLogId: workoutLogId ?? this.workoutLogId,
@@ -63,6 +67,7 @@ class WorkoutInProgress extends WorkoutState {
       errorMessage: errorMessage,
       restUntil: clearRest ? null : restUntil ?? this.restUntil,
       completionPending: completionPending ?? this.completionPending,
+      historyCheckPending: historyCheckPending ?? this.historyCheckPending,
     );
   }
 
@@ -89,6 +94,7 @@ class WorkoutInProgress extends WorkoutState {
     errorMessage,
     restUntil,
     completionPending,
+    historyCheckPending,
   ];
 }
 

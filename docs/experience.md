@@ -79,6 +79,9 @@ The user selected Focus. Keep one active set prominent, with the full workout ac
 During rest, retain exercise context and the next set. Let users extend, skip, or continue logging.
 Do not force an exercise change when its sets are complete; equipment availability can change the order.
 Completed sets remain visible with undo. Suggested sets do not contribute to totals.
+Users may bypass an exercise through the overview and return later. Partial finish uses
+the existing single confirmation; untouched exercises stay out of history details. An empty
+finish creates no history. There is no separate stored skipped status.
 
 ## Navigation
 
@@ -121,6 +124,11 @@ refined in Phase 2; the current flow review and remaining limits are in [phase-2
 The final Phase 2 pass reduced Plans/editor heading emphasis, allowed long routine names full width,
 stacked day counts for compact/large-text layouts and fixed repeated plan-save failure feedback.
 Edits remain visible after failure; successful saves close the editor only after persistence.
+
+The Phase 4 core-flow review is in [phase-4-review.md](phase-4-review.md). Failed history
+checks during resume now block session mutations until recovery succeeds. Retry either
+restores the unfinished session or cleans an already-saved cache without rewriting history.
+Repeated resume requests retain unsaved edits; start cannot overwrite an existing cache.
 
 Review: visual character, ease of reading while tired, reachability of logging controls,
 and the refined Focus design. Review empty/error states and native platform behavior in implementation.

@@ -178,6 +178,150 @@ void main() {
     },
   );
 
+  test('resume does not replace unsaved edits with an older cache', () async {
+    await start();
+    repository.failSave = true;
+    await complete();
+    expect(
+      repository.active!.exerciseLogs[exercise.id]!.first.isCompleted,
+      isFalse,
+    );
+    bloc.add(ResumeWorkout());
+    repository.failSave = false;
+    await settle(bloc, RetryWorkoutSave());
+    expect(
+      repository.active!.exerciseLogs[exercise.id]!.first.isCompleted,
+      isTrue,
+    );
+  });
+
+  test('start recovers an existing cache instead of replacing it', () async {
+    await start();
+    await complete();
+    final savedId = repository.active!.workoutLogId;
+    await bloc.close();
+    bloc = WorkoutBloc(repository);
+    await settle(
+      bloc,
+      StartWorkout(
+        plan: plan.copyWith(id: 'new-plan'),
+        day: day.copyWith(id: 'new-day'),
+      ),
+    );
+    expect(repository.active!.workoutLogId, savedId);
+    final resumed = bloc.state as WorkoutInProgress;
+    expect(resumed.planId, plan.id);
+    expect(resumed.day.id, day.id);
+    expect(resumed.exerciseLogs[exercise.id]!.first.isCompleted, isTrue);
+  });
+
+  test(
+    'history failure locks recovery until a committed session can be checked',
+    () async {
+      await start();
+      await complete();
+      repository.failClear = true;
+      await settle(bloc, FinishWorkout());
+      final saved = repository.logs.single;
+      await bloc.close();
+      repository.failClear = false;
+      repository.failReadHistory = true;
+      bloc = WorkoutBloc(repository);
+      await settle(bloc, ResumeWorkout());
+      expect((bloc.state as WorkoutInProgress).historyCheckPending, isTrue);
+      bloc.add(AddSet(exercise.id));
+      bloc.add(FinishWorkout());
+      bloc.add(CancelWorkout());
+      await settle(bloc, RetryWorkoutSave());
+      expect(repository.logWrites, 1);
+      expect(repository.active, isNotNull);
+      expect((bloc.state as WorkoutInProgress).isReadOnly, isTrue);
+      repository.failReadHistory = false;
+      await settle(bloc, RetryWorkoutSave());
+      expect(bloc.state, isA<WorkoutInitial>());
+      expect(repository.active, isNull);
+      expect(repository.logWrites, 1);
+      expect(repository.logs.single, same(saved));
+    },
+  );
+
+  test(
+    'history retry restores an unfinished session without losing progress',
+    () async {
+      await start();
+      await complete();
+      final savedId = repository.active!.workoutLogId;
+      await bloc.close();
+      repository.failReadHistory = true;
+      bloc = WorkoutBloc(repository);
+      await settle(bloc, ResumeWorkout());
+      repository.failReadHistory = false;
+      await settle(bloc, RetryWorkoutSave());
+      final resumed = bloc.state as WorkoutInProgress;
+      expect(resumed.historyCheckPending, isFalse);
+      expect(resumed.workoutLogId, savedId);
+      expect(resumed.exerciseLogs[exercise.id]!.first.isCompleted, isTrue);
+      await settle(bloc, FinishWorkout());
+      expect(repository.logs.single.totalVolume, 125);
+      expect(repository.logWrites, 1);
+    },
+  );
+
+  test(
+    'cache read failures are recoverable and never start over the cache',
+    () async {
+      await start();
+      final savedId = repository.active!.workoutLogId;
+      await bloc.close();
+      bloc = WorkoutBloc(repository);
+      repository.failReadActive = true;
+      var failed = bloc.stream.firstWhere((state) => state is WorkoutError);
+      bloc.add(ResumeWorkout());
+      await failed;
+      failed = bloc.stream.firstWhere((state) => state is WorkoutError);
+      bloc.add(
+        StartWorkout(
+          plan: plan.copyWith(id: 'new-plan'),
+          day: day,
+        ),
+      );
+      await failed;
+      expect(repository.active!.workoutLogId, savedId);
+      repository.failReadActive = false;
+      await settle(bloc, ResumeWorkout());
+      expect((bloc.state as WorkoutInProgress).workoutLogId, savedId);
+    },
+  );
+
+  test(
+    'partial finish preserves completed work and excludes untouched suggestions from totals',
+    () async {
+      final skipped = Exercise(
+        id: 'skipped',
+        name: 'Leg press',
+        targetWeight: 500,
+      );
+      final partialDay = day.copyWith(exercises: [exercise, skipped]);
+      await settle(bloc, StartWorkout(plan: plan, day: partialDay));
+      await complete();
+      await settle(bloc, FinishWorkout());
+      final saved = repository.logs.single;
+      expect(saved.totalVolume, 125);
+      expect(
+        saved.exerciseLogs.values
+            .expand((sets) => sets)
+            .where((set) => set.isCompleted),
+        hasLength(1),
+      );
+      expect(
+        saved.exerciseLogs[skipped.id]!.every((set) => !set.isCompleted),
+        isTrue,
+      );
+      expect(saved.endTime, now);
+      expect(repository.active, isNull);
+    },
+  );
+
   test('resume preserves sets and the wall clock rest deadline', () async {
     await start();
     await complete();

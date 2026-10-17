@@ -35,7 +35,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 
   String? _editingSet;
-  bool _hadSession = false;
   late final Timer _ticker;
 
   @override
@@ -58,6 +57,8 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         );
         if (unfinished >= 0) _select(unfinished);
         _syncRest(state);
+      } else if (state is WorkoutInitial) {
+        _leaveWorkout();
       }
     });
   }
@@ -70,6 +71,14 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
       );
     } else {
       context.read<TimerBloc>().add(ResetTimer());
+    }
+  }
+
+  void _leaveWorkout() {
+    if (ModalRoute.of(context)?.isCurrent == true &&
+        Navigator.of(context).canPop()) {
+      // Persistence is finished; bypass the pending-write back guard.
+      Navigator.pop(context);
     }
   }
 
@@ -139,7 +148,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
   }
 
   Future<void> _finish(WorkoutInProgress state, {bool discard = false}) async {
-    if (state.completionPending) {
+    if (state.isReadOnly) {
       context.read<WorkoutBloc>().add(RetryWorkoutSave());
       return;
     }
@@ -156,7 +165,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
               ? 'The logged sets in this session will be removed.'
               : completed == 0
               ? 'No sets were logged. This session will be discarded.'
-              : '$completed completed sets will be saved. Unfinished sets stay out of your totals.',
+              : '$completed completed ${completed == 1 ? 'set' : 'sets'} will be saved. Unfinished sets stay out of your totals.',
         ),
         actions: [
           TextButton(
@@ -185,11 +194,10 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         previous.restUntil != current.restUntil,
     listener: (context, state) {
       if (state is WorkoutInProgress) {
-        _hadSession = true;
         _syncRest(state);
-      } else if (state is WorkoutInitial && _hadSession) {
+      } else if (state is WorkoutInitial) {
         context.read<TimerBloc>().add(ResetTimer());
-        Navigator.pop(context);
+        _leaveWorkout();
       }
     },
     builder: (context, state) {
@@ -206,7 +214,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           ),
         );
       }
-      _hadSession = true;
       final exercises = state.day.exercises;
       final completed = state.exerciseLogs.values
           .expand((sets) => sets)
@@ -237,7 +244,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
               ),
               PopupMenuButton<String>(
                 tooltip: 'Workout options',
-                enabled: !state.isSaving && !state.completionPending,
+                enabled: !state.isSaving && !state.isReadOnly,
                 onSelected: (_) => _finish(state, discard: true),
                 itemBuilder: (_) => [
                   const PopupMenuItem(
@@ -255,7 +262,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                 final focus = exercises.isEmpty
                     ? _emptyExercise()
                     : AbsorbPointer(
-                        absorbing: state.completionPending,
+                        absorbing: state.isReadOnly,
                         child: _focus(
                           state,
                           exercises[_selected.clamp(0, exercises.length - 1)],
@@ -292,7 +299,9 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
                               Text(
-                                state.isSaving
+                                state.historyCheckPending
+                                    ? 'Recovery needs retry'
+                                    : state.isSaving
                                     ? 'Saving…'
                                     : state.errorMessage == null
                                     ? 'Saved on device'
@@ -375,7 +384,9 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                         child: ConstrainedBox(
                           constraints: const BoxConstraints(maxWidth: 700),
                           child: SpottrButton(
-                            text: state.completionPending
+                            text: state.historyCheckPending
+                                ? 'Retry recovery'
+                                : state.completionPending
                                 ? 'Retry finishing'
                                 : 'Finish workout',
                             variant: SpottrButtonVariant.outline,
@@ -436,7 +447,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
             Expanded(child: Text(exercise.name, style: text.headlineLarge)),
             IconButton(
               tooltip: 'Edit exercise for this session',
-              onPressed: state.isSaving
+              onPressed: state.isSaving || state.isReadOnly
                   ? null
                   : () => _editExercise(
                       exercise,
@@ -537,8 +548,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                             label: 'Weight · kg',
                             value: selected.weight,
                             step: 2.5,
-                            enabled:
-                                !state.isSaving && !state.completionPending,
+                            enabled: !state.isSaving && !state.isReadOnly,
                             onChanged: (value) => update(
                               selected.copyWith(weight: value.toDouble()),
                             ),
@@ -556,8 +566,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                             label: 'Reps',
                             value: selected.reps,
                             step: 1,
-                            enabled:
-                                !state.isSaving && !state.completionPending,
+                            enabled: !state.isSaving && !state.isReadOnly,
                             onChanged: (value) =>
                                 update(selected.copyWith(reps: value.toInt())),
                             onStep: (delta) => context.read<WorkoutBloc>().add(
@@ -579,7 +588,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                       icon: const Icon(Icons.check_rounded),
                       onPressed:
                           state.isSaving ||
-                              state.completionPending ||
+                              state.isReadOnly ||
                               selected.reps <= 0
                           ? null
                           : () {
@@ -675,8 +684,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                   tooltip: set.isCompleted
                       ? 'Undo set ${index + 1}'
                       : 'Log set ${index + 1}',
-                  onPressed:
-                      state.isSaving || state.completionPending || set.reps <= 0
+                  onPressed: state.isSaving || state.isReadOnly || set.reps <= 0
                       ? null
                       : () => context.read<WorkoutBloc>().add(
                           SetCompletion(
@@ -702,7 +710,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                 ),
                 PopupMenuButton<String>(
                   tooltip: 'Set ${index + 1} options',
-                  enabled: !state.isSaving && !state.completionPending,
+                  enabled: !state.isSaving && !state.isReadOnly,
                   onSelected: (value) {
                     if (value == 'edit') {
                       setState(() => _editingSet = set.id);
@@ -758,7 +766,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
             onTap: () => setState(() => _editingSet = set.id),
           ),
         TextButton.icon(
-          onPressed: state.isSaving
+          onPressed: state.isSaving || state.isReadOnly
               ? null
               : () => context.read<WorkoutBloc>().add(AddSet(exercise.id)),
           icon: const Icon(Icons.add, size: 20),
@@ -807,7 +815,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           ),
           trailing: PopupMenuButton<String>(
             tooltip: 'Options for ${exercise.name}',
-            enabled: !state.isSaving && !state.completionPending,
+            enabled: !state.isSaving && !state.isReadOnly,
             onSelected: (action) {
               if (action == 'replace') {
                 if (dismiss) Navigator.pop(context);
@@ -860,7 +868,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
         ),
       const SizedBox(height: 12),
       TextButton.icon(
-        onPressed: state.isSaving || state.completionPending
+        onPressed: state.isSaving || state.isReadOnly
             ? null
             : () {
                 if (dismiss) Navigator.pop(context);

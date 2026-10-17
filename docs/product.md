@@ -42,7 +42,9 @@ Accounts, social feeds, nutrition, and AI coaching are outside the proposed firs
 - Decide whether notes belong to the shared exercise, a plan entry, or both; avoid ambiguous inheritance.
 - Give exercises stable identity across plans. Preserve session names and context when plans change.
 - Define completed-set volume, warm-up inclusion, timed/bodyweight progress, and personal-record rules.
-- Settle how skipped exercises and partially completed workouts appear in history.
+- Partial workouts use the existing finish confirmation. Only completed sets count toward
+  totals and appear in history details; untouched exercises are omitted. Users may bypass
+  an exercise through the overview and return later. No separate skipped status is stored.
 
 ## Acceptance targets
 

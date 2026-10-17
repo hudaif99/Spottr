@@ -71,17 +71,33 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     Emitter<WorkoutState> emit,
   ) async {
     final event = _resolveSetChange(incoming);
-    if (event is ResumeWorkout) {
+    final before = state;
+    if (event is ResumeWorkout ||
+        event is RetryWorkoutSave &&
+            before is WorkoutInProgress &&
+            before.historyCheckPending) {
+      if (before is WorkoutInProgress && !before.historyCheckPending) return;
       emit(WorkoutRestoring());
-      final cached = _repository.getActiveWorkout();
+      final ActiveWorkout? cached;
+      try {
+        cached = _repository.getActiveWorkout();
+      } catch (_) {
+        emit(
+          const WorkoutError(
+            'Could not read your saved workout. Retry recovery before starting.',
+          ),
+        );
+        return;
+      }
       if (cached == null) {
         emit(WorkoutInitial());
         return;
       }
       bool completionPending = false;
+      final cachedId = cached.workoutLogId;
       try {
         final logs = await _repository.getWorkoutLogs();
-        if (logs.any((log) => log.id == cached.workoutLogId)) {
+        if (logs.any((log) => log.id == cachedId)) {
           completionPending = true;
           await _repository.clearActiveWorkout();
           emit(WorkoutInitial());
@@ -114,8 +130,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
             restUntil: cached.restUntil,
             errorMessage: completionPending
                 ? 'Workout saved. Retry finishing to close this session.'
-                : 'Could not check saved history. Retry before finishing.',
+                : 'Could not verify saved history. Retry recovery to continue.',
             completionPending: completionPending,
+            historyCheckPending: !completionPending,
           ),
         );
       }
@@ -124,6 +141,10 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     if (event is StartWorkout) {
       if (state is WorkoutInProgress) return;
       try {
+        if (_repository.getActiveWorkout() != null) {
+          await _handle(ResumeWorkout(), emit);
+          return;
+        }
         final history = await _repository.getWorkoutLogs();
         final previous = <String, List<SetLog>>{};
         for (final exercise in event.day.exercises) {
@@ -158,6 +179,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
     }
     final current = state;
     if (current is! WorkoutInProgress) return;
+    if (current.historyCheckPending) return;
     if (event is FinishWorkout ||
         event is CancelWorkout ||
         event is RetryWorkoutSave && current.completionPending) {

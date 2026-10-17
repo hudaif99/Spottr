@@ -14,6 +14,8 @@ class FakeWorkoutRepository implements WorkoutRepository {
   bool failSave = false;
   bool failClear = false;
   bool failHistory = false;
+  bool failReadHistory = false;
+  bool failReadActive = false;
   int logWrites = 0;
   int concurrentWrites = 0;
   int maxConcurrentWrites = 0;
@@ -26,9 +28,17 @@ class FakeWorkoutRepository implements WorkoutRepository {
   int getDefaultRestTime() => defaultRestTime;
 
   @override
-  ActiveWorkout? getActiveWorkout() => active;
+  ActiveWorkout? getActiveWorkout() {
+    if (failReadActive) throw StateError('Storage unavailable');
+    return active;
+  }
+
   @override
-  Future<List<WorkoutLog>> getWorkoutLogs() async => [...logs];
+  Future<List<WorkoutLog>> getWorkoutLogs() async {
+    if (failReadHistory) throw StateError('Storage unavailable');
+    return [...logs];
+  }
+
   @override
   Future<void> saveActiveWorkout(ActiveWorkout workout) async {
     concurrentWrites++;

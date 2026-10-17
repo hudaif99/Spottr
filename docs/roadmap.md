@@ -14,7 +14,7 @@
 | 1. Setup | Preserve app, create branch, add project guidance | Branch references and documentation verified | Complete |
 | 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Implementation reviewed; user/native-device sign-off pending |
 | 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Implementation review complete; native acceptance checks remain |
-| 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | Session changes and exercise reuse implemented; core-flow review remains |
+| 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | Implementation review complete; native acceptance checks remain |
 | 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Session details implemented; remaining work planned |
 | 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Planned |
 
@@ -218,6 +218,22 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 - Formatting and scoped analysis of all nine changed/new Dart files are clean; diff whitespace checks passed.
 - Next: review the remaining Phase 4 core-flow gaps and clarify skip/partial-workout behavior
   before adding another feature slice. No starter plans, history charts or new record rules were added.
+
+### Core-flow review — 17 October 2026
+
+- Reviewed start, log/correct, add/replace/reorder, resume, partial finish and cancel together.
+- Confirmed partial finish uses the existing single confirmation. Only completed sets count;
+  untouched exercises stay out of history details. No new skipped-status schema was added.
+- Fixed failed recovery checks permitting mutation, repeated resume losing retained edits,
+  start replacing an existing cache, cache-read errors and cleanup leaving a loading screen.
+- Recovery retry now verifies history before allowing writes. Already-committed sessions are
+  cleaned up without rewriting history; unfinished sessions retain their cached progress.
+- Verification: 72 focused workout/UI/history/storage tests and four restore interaction tests
+  passed. Formatting and scoped analysis of all seven changed Dart files are clean.
+- Reviewed actual partial-finish and recovery renders, including compact dark mode at 1.8x
+  text scale. Native-device, screen-reader and iOS checks remain release acceptance work.
+- See [phase-4-review.md](phase-4-review.md) for the final behavior and remaining scope.
+- Phase 4 implementation review is complete. Next: Phase 5 reminder date and scheduling fixes.
 
 ## Reliability backlog from the initial source review
 

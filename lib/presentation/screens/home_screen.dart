@@ -224,6 +224,17 @@ class _TodayState extends State<_Today> {
                 style: text.headlineLarge,
               ),
               const SizedBox(height: 24),
+              if (workout is WorkoutError) ...[
+                Text(workout.message),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () =>
+                        context.read<WorkoutBloc>().add(ResumeWorkout()),
+                    child: const Text('Retry recovery'),
+                  ),
+                ),
+              ],
               if (plans is PlansLoading || plans is PlansInitial)
                 const LinearProgressIndicator()
               else if (plans is PlansError)
@@ -236,7 +247,13 @@ class _TodayState extends State<_Today> {
                   eyebrow: 'Workout in progress',
                   name: workout.day.name,
                   description:
-                      '${workout.exerciseLogs.values.expand((sets) => sets).where((set) => set.isCompleted).length} sets logged · saved on this device',
+                      '${workout.exerciseLogs.values.expand((sets) => sets).where((set) => set.isCompleted).length} sets logged · ${workout.isSaving
+                          ? 'saving…'
+                          : workout.historyCheckPending
+                          ? 'recovery needs retry'
+                          : workout.errorMessage != null
+                          ? 'save needs retry'
+                          : 'saved on this device'}',
                   action: 'Resume workout',
                   onPressed: _openWorkout,
                 )

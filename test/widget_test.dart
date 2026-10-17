@@ -9,6 +9,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:spottr/core/theme/app_theme.dart';
 import 'package:spottr/data/datasources/local_database_service.dart';
 import 'package:spottr/domain/models/exercise.dart';
+import 'package:spottr/domain/models/active_workout.dart';
+import 'package:spottr/domain/models/set_log.dart';
+import 'package:spottr/domain/models/workout_log.dart';
 import 'package:spottr/domain/models/plan.dart';
 import 'package:spottr/domain/models/workout_day.dart';
 import 'package:spottr/domain/repositories/workout_repository.dart';
@@ -24,6 +27,7 @@ import 'package:spottr/presentation/blocs/workout/workout_event.dart';
 import 'package:spottr/presentation/blocs/workout/workout_state.dart';
 import 'package:spottr/presentation/screens/active_workout_screen.dart';
 import 'package:spottr/presentation/screens/home_screen.dart';
+import 'package:spottr/presentation/screens/history_screen.dart';
 import 'package:spottr/presentation/screens/plan_management_screen.dart';
 import 'package:spottr/presentation/screens/create_plan_screen.dart';
 import 'package:spottr/presentation/widgets/spottr_button.dart';
@@ -346,7 +350,7 @@ void main() {
     await tester.pump();
     expect(find.text('Trap bar deadlift'), findsOneWidget);
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
-      await tester.pump(const Duration(milliseconds: 250));
+    await tester.pump(const Duration(milliseconds: 250));
     await capture(tester, 'exercise-picker-loading-dark');
     repo.loadGate!.complete();
     await tester.pumpAndSettle();
@@ -425,6 +429,162 @@ void main() {
       expect(added.note, 'Seat at 3');
       expect(repo.exercises.single, same(custom));
       expect(plan.days.single.exercises, hasLength(3));
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets(
+    'partial workout finishes after one confirmation and shows only logged work',
+    (tester) async {
+      final (repo, _) = await mount(tester, const HomeScreen());
+      await tester.tap(find.text('Start workout'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Log set 1'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Finish workout'));
+      await tester.pumpAndSettle();
+      expect(find.text('Finish your workout?'), findsOneWidget);
+      expect(
+        find.text(
+          '1 completed set will be saved. Unfinished sets stay out of your totals.',
+        ),
+        findsOneWidget,
+      );
+      await capture(tester, 'partial-workout-finish-light');
+      await tester.tap(find.text('Finish'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ActiveWorkoutScreen), findsNothing);
+      expect(repo.logs, hasLength(1));
+      expect(repo.logs.single.totalVolume, 125);
+      expect(repo.active, isNull);
+      await tester.tap(find.text('Progress'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lower body'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WorkoutDetailScreen), findsOneWidget);
+      expect(find.text('Cable kickback'), findsOneWidget);
+      expect(find.text('Leg press'), findsNothing);
+      expect(find.text('Set 2'), findsNothing);
+      expect(find.text('1'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
+
+  for (final (size, scale, dark, suffix) in [
+    (const Size(390, 844), 1.0, false, 'light'),
+    (const Size(320, 568), 1.8, true, 'large-text-dark'),
+  ]) {
+    testWidgets('recovery check blocks logging and retries in $suffix', (
+      tester,
+    ) async {
+      final repo = FakeWorkoutRepository()
+        ..failReadHistory = true
+        ..active = ActiveWorkout(
+          workoutLogId: 'recover',
+          planId: plan.id,
+          day: day,
+          startTime: DateTime.now(),
+          exerciseLogs: {
+            for (final exercise in exercises)
+              exercise.id: [
+                SetLog(id: '${exercise.id}-set', reps: 10, weight: 12.5),
+              ],
+          },
+        );
+      final (_, workout) = await mount(
+        tester,
+        const ActiveWorkoutScreen(),
+        repository: repo,
+        size: size,
+        textScale: scale,
+        dark: dark,
+      );
+      workout.add(ResumeWorkout());
+      await tester.pumpAndSettle();
+      expect((workout.state as WorkoutInProgress).isReadOnly, isTrue);
+      expect(
+        tester
+            .widget<SpottrButton>(
+              find.widgetWithText(SpottrButton, 'Log set 1'),
+            )
+            .onPressed,
+        isNull,
+      );
+      expect(
+        tester
+            .widget<PopupMenuButton<String>>(
+              find.byWidgetPredicate(
+                (widget) =>
+                    widget is PopupMenuButton<String> &&
+                    widget.tooltip == 'Workout options',
+              ),
+            )
+            .enabled,
+        isFalse,
+      );
+      await capture(tester, 'workout-recovery-$suffix');
+      expect(tester.takeException(), isNull);
+      repo.failReadHistory = false;
+      await tester.tap(find.text('Retry recovery'));
+      await tester.pumpAndSettle();
+      expect((workout.state as WorkoutInProgress).isReadOnly, isFalse);
+      expect(repo.active!.workoutLogId, 'recover');
+      expect(find.text('Finish workout'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets('Today exposes failed cache recovery and can retry it', (
+    tester,
+  ) async {
+    final repo = FakeWorkoutRepository()..failReadActive = true;
+    final (_, workout) = await mount(
+      tester,
+      const HomeScreen(),
+      repository: repo,
+    );
+    workout.add(ResumeWorkout());
+    await tester.pumpAndSettle();
+    expect(find.text('Retry recovery'), findsOneWidget);
+    repo.failReadActive = false;
+    await tester.tap(find.text('Retry recovery'));
+    await tester.pumpAndSettle();
+    expect(find.text('Retry recovery'), findsNothing);
+    expect(find.text('Start workout'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
+
+  testWidgets(
+    'starting with an already saved cache returns to Today after cleanup',
+    (tester) async {
+      final repo = FakeWorkoutRepository()
+        ..active = ActiveWorkout(
+          workoutLogId: 'committed',
+          planId: plan.id,
+          day: day,
+          startTime: DateTime.now(),
+          exerciseLogs: const {},
+        );
+      repo.logs.add(
+        WorkoutLog(
+          id: 'committed',
+          planId: plan.id,
+          dayId: day.id,
+          dayName: day.name,
+          startTime: DateTime.now(),
+        ),
+      );
+      await mount(tester, const HomeScreen(), repository: repo);
+      await tester.tap(find.text('Start workout'));
+      await tester.pumpAndSettle();
+      expect(find.byType(ActiveWorkoutScreen), findsNothing);
+      expect(find.text('Start workout'), findsOneWidget);
+      expect(repo.active, isNull);
+      expect(repo.logs, hasLength(1));
       expect(tester.takeException(), isNull);
       await unmount(tester);
     },
