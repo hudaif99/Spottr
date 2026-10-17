@@ -46,6 +46,11 @@ workouts. Preserve original set positions and labels; offer a visible full-worko
 Keep rule explanations secondary and searchable history usable with the keyboard open.
 Further charts and estimated-strength metrics remain outside this slice.
 
+Today distinguishes recorded minutes from missing timing and shows history loading/retry states
+before recommending a workout. Weekly date markers fit the available width and provide full date
+labels for accessibility. Large text uses smaller summary typography. In short Progress layouts,
+omit the redundant embedded heading and tighten tab spacing so search stays reachable.
+
 ### Rejected design history
 
 All Stitch directions were rejected on 13 October 2026. Their provisional approvals,

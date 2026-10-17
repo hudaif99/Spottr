@@ -48,6 +48,9 @@ Accounts, social feeds, nutrition, and AI coaching are outside the proposed firs
 - Exercise progress shows saved completed sets by shared movement identity. Best logged set
   means highest recorded kg, then highest reps at that weight; logged warm-ups and drop sets
   count. Older entries without identity stay separate. No estimated strength or body mass is inferred.
+- Today's weekly summary uses the local Monday-to-Sunday calendar week through the current
+  time. Only recorded durations contribute to minutes; missing timing stays explicit. History
+  loading/failures never appear as zero progress or a guessed next workout. Resume remains available.
 - Partial workouts use the existing finish confirmation. Only completed sets count toward
   totals and appear in history details; untouched exercises are omitted. Users may bypass
   an exercise through the overview and return later. No separate skipped status is stored.

@@ -51,6 +51,15 @@ class _LibraryRepository extends FakeWorkoutRepository {
   }
 }
 
+class _HistoryRepository extends FakeWorkoutRepository {
+  Completer<void>? historyGate;
+  @override
+  Future<List<WorkoutLog>> getWorkoutLogs() async {
+    await historyGate?.future;
+    return super.getWorkoutLogs();
+  }
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   final boundary = GlobalKey();
@@ -133,6 +142,7 @@ void main() {
           child: RepaintBoundary(
             key: boundary,
             child: MaterialApp(
+              debugShowCheckedModeBanner: false,
               theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(
@@ -589,6 +599,191 @@ void main() {
       await unmount(tester);
     },
   );
+
+  testWidgets('Today waits for history before recommending a workout', (
+    tester,
+  ) async {
+    final repo = _HistoryRepository()..historyGate = Completer<void>();
+    addTearDown(() {
+      if (!repo.historyGate!.isCompleted) repo.historyGate!.complete();
+    });
+    await mount(tester, const HomeScreen(), repository: repo);
+    expect(find.text('Loading your workout history…'), findsOneWidget);
+    expect(find.text('Start workout'), findsNothing);
+    expect(find.text('This week'), findsNothing);
+    repo.historyGate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Start workout'), findsOneWidget);
+    expect(find.text('This week'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets(
+    'Today retries history without inventing zero progress or a next day',
+    (tester) async {
+      final now = DateTime(2026, 10, 17, 18);
+      final upper = WorkoutDay(
+        id: 'upper',
+        name: 'Upper body',
+        exercises: exercises,
+      );
+      final routine = plan.copyWith(days: [day, upper]);
+      final repo = FakeWorkoutRepository()
+        ..failReadHistory = true
+        ..logs.add(
+          WorkoutLog(
+            id: 'previous',
+            planId: plan.id,
+            dayId: day.id,
+            dayName: day.name,
+            startTime: now.subtract(const Duration(days: 1)),
+            exerciseLogs: {
+              'kickback': [SetLog(id: 'done', isCompleted: true)],
+            },
+          ),
+        );
+      await mount(
+        tester,
+        HomeScreen(now: () => now),
+        repository: repo,
+        initialPlan: routine,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Start workout'), findsNothing);
+      expect(find.text('This week'), findsNothing);
+      await capture(tester, 'today-history-error');
+      repo.failReadHistory = false;
+      await tester.tap(find.text('Retry loading history'));
+      await tester.pumpAndSettle();
+      expect(find.text('Upper body'), findsOneWidget);
+      await tester.tap(find.text('Start workout'));
+      await tester.pumpAndSettle();
+      expect(repo.active!.day.id, 'upper');
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
+
+  for (final (size, scale, dark, name) in [
+    (const Size(390, 844), 1.0, false, 'today-week-light'),
+    (const Size(320, 568), 1.8, true, 'today-week-large-text'),
+    (const Size(1194, 834), 1.0, true, 'today-week-tablet'),
+  ]) {
+    testWidgets('Today shows only recorded duration in $name', (tester) async {
+      final now = DateTime(2026, 10, 17, 18);
+      final repo = FakeWorkoutRepository()
+        ..logs.addAll([
+          WorkoutLog(
+            id: 'legacy',
+            planId: plan.id,
+            dayId: day.id,
+            dayName: 'Older workout',
+            startTime: now.subtract(const Duration(hours: 1)),
+            exerciseLogs: {
+              'kickback': [SetLog(id: 'legacy-set', isCompleted: true)],
+            },
+          ),
+          WorkoutLog(
+            id: 'valid',
+            planId: plan.id,
+            dayId: day.id,
+            dayName: 'Recorded workout',
+            startTime: now.subtract(const Duration(days: 1, minutes: 20)),
+            endTime: now.subtract(const Duration(days: 1)),
+            exerciseLogs: {
+              'kickback': [SetLog(id: 'completed-set', isCompleted: true)],
+            },
+          ),
+        ]);
+      await mount(
+        tester,
+        HomeScreen(now: () => now),
+        repository: repo,
+        size: size,
+        textScale: scale,
+        dark: dark,
+      );
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('This week'), 150);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('This week'));
+      await tester.pumpAndSettle();
+      await capture(tester, '$name-calendar');
+      await tester.scrollUntilVisible(find.text('minutes recorded'), 150);
+      await tester.pumpAndSettle();
+      expect(find.text('20'), findsOneWidget);
+      expect(
+        find.text('Some workouts have no recorded duration.'),
+        findsOneWidget,
+      );
+      await capture(tester, name);
+      await tester.scrollUntilVisible(
+        find.textContaining('Duration unavailable'),
+        120,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Older workout'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets('Today refreshes the calendar after resuming on a new day', (
+    tester,
+  ) async {
+    var now = DateTime(2026, 10, 18, 23, 59);
+    await mount(tester, HomeScreen(now: () => now));
+    expect(find.text('Sunday, 18 October'), findsOneWidget);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    now = DateTime(2026, 10, 19, 0, 1);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text('Monday, 19 October'), findsOneWidget);
+    await unmount(tester);
+  });
+
+  testWidgets('Progress search remains reachable in compact landscape', (
+    tester,
+  ) async {
+    final repo = FakeWorkoutRepository()
+      ..logs.add(
+        WorkoutLog(
+          id: 'completed',
+          planId: plan.id,
+          dayId: day.id,
+          dayName: day.name,
+          startTime: DateTime(2026, 10, 17),
+          exerciseNames: {'kickback': 'Cable kickback'},
+          exerciseLogs: {
+            'kickback': [
+              SetLog(id: 'done', isCompleted: true, weight: 20, reps: 8),
+            ],
+          },
+        ),
+      );
+    await mount(
+      tester,
+      const HomeScreen(),
+      repository: repo,
+      size: const Size(568, 320),
+      textScale: 1.8,
+      dark: true,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Progress').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Exercises'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(TextField));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField).hitTestable(), findsOneWidget);
+    await tester.tap(find.byType(TextField));
+    await tester.enterText(find.byType(TextField), 'cable');
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    await capture(tester, 'progress-compact-landscape');
+    await unmount(tester);
+  });
 
   testWidgets('Today starts the suggested workout with one tap', (
     tester,

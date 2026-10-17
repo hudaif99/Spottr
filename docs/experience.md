@@ -86,6 +86,10 @@ finish creates no history. There is no separate stored skipped status.
 ## Navigation
 
 - Today: next/resumable workout and a compact weekly view.
+- Today waits for readable history before recommending a next day. Read failures show retry;
+  loading and failures do not display empty progress. Existing session resume remains available.
+  Weekly minutes use recorded durations; unavailable timing is explained rather than estimated.
+  Calendar context refreshes on foreground resume and uses local calendar dates.
 - Plans: routine, exercise selection, and editing.
 - Progress: saved workouts and searchable exercise history with best logged sets.
 - Workout: a dedicated flow with an overview, easy return, and explicit finish.

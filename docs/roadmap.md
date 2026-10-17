@@ -15,7 +15,7 @@
 | 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Implementation reviewed; user/native-device sign-off pending |
 | 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Implementation review complete; native acceptance checks remain |
 | 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | Implementation review complete; native acceptance checks remain |
-| 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Reminders and exercise history implemented; completion review remains |
+| 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Implementation review complete; native acceptance checks remain |
 | 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Planned |
 
 Complete each phase with a concise review: what changed, what was verified, and what remains.
@@ -236,6 +236,22 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 - Phase 4 implementation review is complete. Next: Phase 5 reminder date and scheduling fixes.
 
 ## Phase 5 completion
+
+### Completion review and Today fixes — 17 October 2026
+
+- Recorded the delivered scope, fixes and release boundary in [phase-5-review.md](phase-5-review.md).
+- Fixed growing legacy durations on Today, partial timing totals, local calendar weeks and
+  missing history appearing as empty progress or a guessed next-day recommendation.
+- Added visible history loading/retry while retaining session resume. Next-day start is checked
+  after history recovers. Today refreshes date/week context when the app resumes.
+- Refined large-text weekly markers/metrics and fixed Progress search becoming unreachable
+  in short landscape layouts. No persistence or reminder rules changed.
+- Verification: all 59 focused weekly-summary, history and workout/UI tests passed.
+  Formatting and analysis of all six changed/new Dart files and diff whitespace checks passed.
+- Reviewed actual light/dark, compact large-text, tablet and landscape renders, including
+  recorded/missing durations, weekly date markers and history failure/retry.
+- Phase 5 implementation review is complete. Next: Phase 6 supported build/device validation
+  and final acceptance. Native keyboards, screen readers, notifications, sharing and iOS remain open.
 
 ### Exercise progress — 17 October 2026
 

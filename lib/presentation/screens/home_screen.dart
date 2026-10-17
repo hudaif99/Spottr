@@ -6,6 +6,7 @@ import '../../domain/models/plan.dart';
 import '../../domain/models/workout_day.dart';
 import '../../domain/models/workout_log.dart';
 import '../../domain/workout_rules.dart';
+import '../../domain/weekly_progress.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_state.dart';
 import '../blocs/plans/plans_event.dart';
@@ -16,6 +17,7 @@ import '../blocs/history/history_bloc.dart';
 import '../blocs/history/history_event.dart';
 import '../blocs/history/history_state.dart';
 import '../widgets/spottr_button.dart';
+import '../formatters/workout_duration.dart';
 import 'active_workout_screen.dart';
 import 'create_plan_screen.dart';
 import 'plan_management_screen.dart';
@@ -23,7 +25,8 @@ import 'settings_screen.dart';
 import 'history_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final DateTime Function()? now;
+  const HomeScreen({super.key, this.now});
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -42,10 +45,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final wide = constraints.maxWidth >= 900;
         final content = IndexedStack(
           index: _tab,
-          children: const [
-            _Today(),
-            PlanManagementScreen(embedded: true),
-            HistoryScreen(embedded: true),
+          children: [
+            _Today(now: widget.now),
+            const PlanManagementScreen(embedded: true),
+            const HistoryScreen(embedded: true),
           ],
         );
         return Scaffold(
@@ -130,14 +133,33 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class _Today extends StatefulWidget {
-  const _Today();
+  final DateTime Function()? now;
+  const _Today({this.now});
   @override
   State<_Today> createState() => _TodayState();
 }
 
-class _TodayState extends State<_Today> {
+class _TodayState extends State<_Today> with WidgetsBindingObserver {
   String? _selectedDay;
   String? _selectedPlan;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) setState(() {});
+  }
+
   void _openWorkout() => Navigator.push(
     context,
     MaterialPageRoute(builder: (_) => const ActiveWorkoutScreen()),
@@ -192,18 +214,8 @@ class _TodayState extends State<_Today> {
           : null;
       day ??= nextWorkoutDay(plan, logs);
     }
-    final now = DateTime.now();
-    final monday = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    ).subtract(Duration(days: now.weekday - 1));
-    final week = logs
-        .where(
-          (log) =>
-              !log.startTime.isBefore(monday) && !log.startTime.isAfter(now),
-        )
-        .toList();
+    final now = (widget.now?.call() ?? DateTime.now()).toLocal();
+    final week = WeeklyProgress.fromLogs(logs, now: now);
     final text = Theme.of(context).textTheme;
     return SafeArea(
       child: Center(
@@ -257,7 +269,7 @@ class _TodayState extends State<_Today> {
                   action: 'Resume workout',
                   onPressed: _openWorkout,
                 )
-              else if (plan != null && day != null)
+              else if (plan != null && day != null && history is HistoryLoaded)
                 _workoutCard(
                   eyebrow: plan.name,
                   name: day.name,
@@ -277,7 +289,8 @@ class _TodayState extends State<_Today> {
                     label: const Text('Change workout'),
                   ),
                 )
-              else if (plans is PlansLoaded)
+              else if (plans is PlansLoaded &&
+                  (plan == null || plan.days.isEmpty))
                 _workoutCard(
                   eyebrow: 'Your first plan',
                   name: 'Build your routine',
@@ -290,56 +303,85 @@ class _TodayState extends State<_Today> {
                   ),
                 ),
               const SizedBox(height: 36),
-              Text('This week', style: text.titleLarge),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  for (var index = 0; index < 7; index++)
-                    Expanded(
-                      child: _weekDay(
-                        monday.add(Duration(days: index)),
-                        logs,
-                        now,
+              if (history is! HistoryLoaded) ...[
+                if (history is HistoryError) ...[
+                  const Text(
+                    'Your workout history could not load. Retry to see your next workout and progress.',
+                  ),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: TextButton(
+                      onPressed: () =>
+                          context.read<HistoryBloc>().add(LoadHistory()),
+                      child: const Text('Retry loading history'),
+                    ),
+                  ),
+                ] else ...[
+                  const Text('Loading your workout history…'),
+                  const SizedBox(height: 12),
+                  const LinearProgressIndicator(),
+                ],
+              ] else ...[
+                Text('This week', style: text.titleLarge),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    for (var index = 0; index < 7; index++)
+                      Expanded(
+                        child: _weekDay(
+                          week.days[index],
+                          week.trainedOn(week.days[index]),
+                          now,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                const Divider(),
+                const SizedBox(height: 24),
+                Wrap(
+                  spacing: 36,
+                  runSpacing: 20,
+                  children: [
+                    _stat('${week.summary.workouts}', 'workouts'),
+                    _stat(
+                      week.missingDurations == week.summary.workouts &&
+                              week.missingDurations > 0
+                          ? '—'
+                          : '${week.recordedDuration.inMinutes}',
+                      week.missingDurations > 0
+                          ? 'minutes recorded'
+                          : 'minutes trained',
+                    ),
+                    _stat('${week.summary.completedSets}', 'sets logged'),
+                  ],
+                ),
+                if (week.missingDurations > 0) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Some workouts have no recorded duration.',
+                    style: text.bodyMedium,
+                  ),
+                ],
+                const SizedBox(height: 36),
+                if (logs.isNotEmpty) ...[
+                  Text('Last session', style: text.titleLarge),
+                  const SizedBox(height: 8),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(logs.first.dayName),
+                    subtitle: Text(
+                      '${DateFormat('d MMM').format(logs.first.startTime.toLocal())} · ${formatWorkoutDuration(logs.first)}',
+                    ),
+                    trailing: const Icon(Icons.arrow_forward_rounded),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => WorkoutDetailScreen(log: logs.first),
                       ),
                     ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Divider(),
-              const SizedBox(height: 24),
-              Wrap(
-                spacing: 36,
-                runSpacing: 20,
-                children: [
-                  _stat('${week.length}', 'workouts'),
-                  _stat(
-                    '${week.fold<int>(0, (minutes, log) => minutes + log.totalDurationInSeconds) ~/ 60}',
-                    'minutes trained',
-                  ),
-                  _stat(
-                    '${week.fold<int>(0, (count, log) => count + log.exerciseLogs.values.expand((sets) => sets).where((set) => set.isCompleted).length)}',
-                    'sets logged',
                   ),
                 ],
-              ),
-              const SizedBox(height: 36),
-              if (logs.isNotEmpty) ...[
-                Text('Last session', style: text.titleLarge),
-                const SizedBox(height: 8),
-                ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(logs.first.dayName),
-                  subtitle: Text(
-                    '${DateFormat('d MMM').format(logs.first.startTime)} · ${logs.first.totalDurationInSeconds ~/ 60} min',
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_rounded),
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => WorkoutDetailScreen(log: logs.first),
-                    ),
-                  ),
-                ),
               ],
               const SizedBox(height: 16),
             ],
@@ -352,7 +394,12 @@ class _TodayState extends State<_Today> {
   Widget _stat(String value, String label) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(value, style: Theme.of(context).textTheme.headlineLarge),
+      Text(
+        value,
+        style: MediaQuery.textScalerOf(context).scale(14) > 20
+            ? Theme.of(context).textTheme.titleLarge
+            : Theme.of(context).textTheme.headlineLarge,
+      ),
       const SizedBox(height: 4),
       Text(label, style: Theme.of(context).textTheme.bodyMedium),
     ],
@@ -398,48 +445,60 @@ class _TodayState extends State<_Today> {
       ],
     ),
   );
-  Widget _weekDay(DateTime date, List<WorkoutLog> logs, DateTime now) {
-    final trained = logs.any((log) => DateUtils.isSameDay(log.startTime, date));
+  Widget _weekDay(DateTime date, bool trained, DateTime now) {
     final today = DateUtils.isSameDay(now, date);
-    return Column(
-      children: [
-        Text(
-          DateFormat('EEEEE').format(date),
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 10),
-        Semantics(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final diameter = MediaQuery.textScalerOf(context)
+            .scale(18)
+            .clamp(30.0, 44.0)
+            .clamp(0.0, constraints.maxWidth)
+            .toDouble();
+        return Semantics(
           label:
-              '${DateFormat('EEEE').format(date)}${trained ? ', trained' : ''}${today ? ', today' : ''}',
-          child: Container(
-            width: 30,
-            height: 30,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: trained
-                  ? context.colors.primaryAccent
-                  : Colors.transparent,
-              border: Border.all(
-                color: today
-                    ? context.colors.primaryAccent
-                    : context.colors.divider,
+              '${DateFormat('EEEE, d MMMM yyyy').format(date)}${trained ? ', trained' : ''}${today ? ', today' : ''}',
+          excludeSemantics: true,
+          child: Column(
+            children: [
+              Text(
+                DateFormat('EEEEE').format(date),
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            ),
-            child: Center(
-              child: trained
-                  ? Icon(
-                      Icons.check_rounded,
-                      size: 16,
-                      color: context.colors.background,
-                    )
-                  : Text(
-                      '${date.day}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-            ),
+              const SizedBox(height: 10),
+              Container(
+                width: diameter,
+                height: diameter,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: trained
+                      ? context.colors.primaryAccent
+                      : Colors.transparent,
+                  border: Border.all(
+                    color: today
+                        ? context.colors.primaryAccent
+                        : context.colors.divider,
+                  ),
+                ),
+                child: Center(
+                  child: trained
+                      ? Icon(
+                          Icons.check_rounded,
+                          size: 16,
+                          color: context.colors.background,
+                        )
+                      : FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            '${date.day}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ),
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
