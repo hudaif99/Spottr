@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../../domain/models/workout_log.dart';
+import '../../../domain/exercise_progress.dart';
 
 abstract class HistoryState extends Equatable {
   const HistoryState();
@@ -14,8 +15,11 @@ class HistoryLoading extends HistoryState {}
 
 class HistoryLoaded extends HistoryState {
   final List<WorkoutLog> logs;
+  final List<ExerciseProgress> exercises;
 
-  const HistoryLoaded(this.logs);
+  HistoryLoaded(List<WorkoutLog> logs)
+    : logs = List.unmodifiable(logs),
+      exercises = buildExerciseProgress(logs);
 
   @override
   List<Object?> get props => [logs];

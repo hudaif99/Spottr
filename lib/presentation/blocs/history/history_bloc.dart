@@ -16,7 +16,7 @@ class HistoryBloc extends Bloc<HistoryEvent, HistoryState> {
   ) async {
     emit(HistoryLoading());
     try {
-      final logs = await _repository.getWorkoutLogs();
+      final logs = (await _repository.getWorkoutLogs()).toList();
       logs.sort((a, b) => b.startTime.compareTo(a.startTime));
       emit(HistoryLoaded(logs));
     } catch (e) {

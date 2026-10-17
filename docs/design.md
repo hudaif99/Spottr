@@ -40,7 +40,11 @@ scroll the header and actions with the list; standard layouts keep the create ac
 Progress uses a compact all-time summary and month-grouped session rows with a clear date
 column. Large text switches metrics to compact inline values. Workout details preserve saved
 exercise names, original set positions and logged-set types. Empty and load-error states explain
-the next step without placeholder metrics. Trends and personal-record design remain later work.
+the next step without placeholder metrics. Workouts/Exercises tabs keep session browsing as the
+default. Exercise history uses searchable open rows, one best-set summary and expandable past
+workouts. Preserve original set positions and labels; offer a visible full-workout action.
+Keep rule explanations secondary and searchable history usable with the keyboard open.
+Further charts and estimated-strength metrics remain outside this slice.
 
 ### Rejected design history
 

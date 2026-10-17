@@ -15,6 +15,7 @@ import 'package:spottr/domain/models/workout_log.dart';
 import 'package:spottr/domain/history_summary.dart';
 import 'package:spottr/presentation/blocs/history/history_bloc.dart';
 import 'package:spottr/presentation/blocs/history/history_event.dart';
+import 'package:spottr/presentation/screens/exercise_progress_screen.dart';
 import 'package:spottr/presentation/blocs/plans/plans_bloc.dart';
 import 'package:spottr/presentation/blocs/plans/plans_event.dart';
 import 'package:spottr/presentation/screens/history_screen.dart';
@@ -233,6 +234,168 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   }
+
+  for (final variant in [
+    ('light', const Size(390, 844), false, 1.0),
+    ('large-text-dark', const Size(320, 720), true, 1.8),
+    ('tablet-dark', const Size(1194, 834), true, 1.0),
+  ]) {
+    testWidgets('exercise search and session details work in ${variant.$1}', (
+      tester,
+    ) async {
+      final repo = _Repository()
+        ..logs.addAll([
+          log.copyWith(exerciseIdentities: {'squat': 'cable-squat'}),
+          _log(
+            'older',
+            DateTime(2026, 10, 10),
+          ).copyWith(exerciseIdentities: {'squat': 'cable-squat'}),
+        ]);
+      await mount(
+        tester,
+        repo,
+        size: variant.$2,
+        dark: variant.$3,
+        scale: variant.$4,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Exercises'));
+      await tester.pumpAndSettle();
+      await capture(tester, 'exercise-list-${variant.$1}');
+      await tester.enterText(find.byType(TextField), 'not an exercise');
+      await tester.pumpAndSettle();
+      expect(find.text('No exercises match your search.'), findsOneWidget);
+      await capture(tester, 'exercise-no-match-${variant.$1}');
+      await tester.enterText(find.byType(TextField), 'CABLE');
+      await tester.pumpAndSettle();
+      expect(find.text('Exercise from an earlier plan'), findsNothing);
+      await tester.ensureVisible(find.text('Saved cable squat'));
+      await tester.tap(find.text('Saved cable squat'));
+      await tester.pumpAndSettle();
+      expect(find.text('Best logged set'), findsOneWidget);
+      expect(find.text('20 kg × 8 reps'), findsOneWidget);
+      expect(find.text('2 workouts · 4 sets logged'), findsOneWidget);
+      await capture(tester, 'exercise-overview-${variant.$1}');
+      final latestSession = find.byKey(
+        const PageStorageKey('exercise-session-latest'),
+      );
+      await tester.scrollUntilVisible(
+        latestSession,
+        120,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      final sessionDate = find.descendant(
+        of: latestSession,
+        matching: find.text('Oct 17, 2026'),
+      );
+      await tester.ensureVisible(sessionDate);
+      await tester.pumpAndSettle();
+      await tester.tap(sessionDate);
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(
+        find.text('Set 3'),
+        120,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('Set 1'), findsOneWidget);
+      expect(find.text('Set 2'), findsNothing);
+      expect(find.text('Drop set'), findsWidgets);
+      expect(find.text('999 kg × 99 reps'), findsNothing);
+      await capture(tester, 'exercise-sets-${variant.$1}');
+      await tester.scrollUntilVisible(
+        find.text('View workout').first,
+        120,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('View workout').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('View workout').first);
+      await tester.pumpAndSettle();
+      expect(find.text('Workout details'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets(
+    'open exercise history refreshes after storage changes and retries',
+    (tester) async {
+      final repo = _Repository()..logs.add(log);
+      await mount(tester, repo);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Exercises'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Saved cable squat'));
+      await tester.pumpAndSettle();
+      final context = tester.element(find.byType(ExerciseProgressScreen));
+      final history = context.read<HistoryBloc>();
+      repo.unreadable = true;
+      history.add(LoadHistory());
+      await tester.pumpAndSettle();
+      expect(find.text('Exercise history could not load.'), findsOneWidget);
+      await capture(tester, 'exercise-load-error');
+      repo.unreadable = false;
+      repo.logs.clear();
+      await tester.tap(find.text('Retry loading history'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('No logged sets for this exercise in your saved history.'),
+        findsOneWidget,
+      );
+      expect(find.text('Best logged set'), findsNothing);
+      await capture(tester, 'exercise-history-removed');
+    },
+  );
+
+  testWidgets(
+    'exercise search scrolls with a compact keyboard and large text',
+    (tester) async {
+      final repo = _Repository()..logs.add(log);
+      await mount(
+        tester,
+        repo,
+        size: const Size(320, 600),
+        dark: true,
+        scale: 1.8,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Exercises'));
+      await tester.pumpAndSettle();
+      tester.view.viewInsets = const FakeViewPadding(bottom: 240);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.byType(TextField));
+      await tester.enterText(find.byType(TextField), 'cable');
+      await tester.pumpAndSettle();
+      expect(find.text('cable'), findsOneWidget);
+      await capture(tester, 'exercise-search-keyboard');
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets('history without completed sets shows exercise guidance', (
+    tester,
+  ) async {
+    final repo = _Repository()
+      ..logs.add(
+        log.copyWith(
+          exerciseLogs: {
+            'squat': [SetLog(id: 'unlogged', weight: 999, reps: 99)],
+          },
+        ),
+      );
+    await mount(tester, repo);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Exercises'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Log a set in a workout to start your exercise history.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('999'), findsNothing);
+    await capture(tester, 'exercise-empty');
+  });
 
   testWidgets('empty history explains how to begin without fake metrics', (
     tester,

@@ -15,7 +15,7 @@
 | 2. Experience | Visual direction and workout flow; Today and Progress concepts | Review the main flow and resolve product decisions | Implementation reviewed; user/native-device sign-off pending |
 | 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Implementation review complete; native acceptance checks remain |
 | 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | Implementation review complete; native acceptance checks remain |
-| 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Reminder scheduling implemented; progress insights remain |
+| 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Reminders and exercise history implemented; completion review remains |
 | 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Planned |
 
 Complete each phase with a concise review: what changed, what was verified, and what remains.
@@ -236,6 +236,23 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 - Phase 4 implementation review is complete. Next: Phase 5 reminder date and scheduling fixes.
 
 ## Phase 5 completion
+
+### Exercise progress — 17 October 2026
+
+- Added Workouts/Exercises navigation, searchable movement history, best logged sets and
+  expandable sessions with a full-workout action. Workouts remains the default view.
+- Used saved shared identity across plans and kept legacy records separate by entry/snapshot.
+  Repeated movement entries count as one workout while preserving all completed sets and positions.
+- Shared the existing weight-then-reps comparison with record notifications; no estimated
+  strength, new record category, storage change or dependency was introduced.
+- Open exercise pages follow refreshed history, including read failures, retry and removed records.
+- Rules and scope are recorded in [exercise-progress.md](exercise-progress.md).
+- Verification: all 80 focused progress/history/workout/UI tests passed. Analysis and
+  formatting of all nine changed/new Dart files and diff whitespace checks passed.
+- Reviewed actual light/dark, compact large-text and tablet renders, including search,
+  expanded sets, simulated keyboard, empty and load-error states.
+- Phase 5 remains in progress. Next: review remaining completion/adaptive-polish gaps before
+  the release phase. Native-device, screen-reader and iOS acceptance checks remain open.
 
 ### Dated reminder scheduling — 17 October 2026
 

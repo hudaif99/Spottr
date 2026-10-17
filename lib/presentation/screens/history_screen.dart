@@ -10,6 +10,7 @@ import '../blocs/history/history_event.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_state.dart';
 import '../widgets/workout_value_control.dart';
+import 'exercise_progress_screen.dart';
 
 String _duration(WorkoutLog log) {
   final duration = recordedWorkoutDuration(log);
@@ -20,88 +21,140 @@ String _duration(WorkoutLog log) {
   return hours == 0 ? '$minutes min' : '${hours}h ${minutes}m';
 }
 
-class HistoryScreen extends StatelessWidget {
+class HistoryScreen extends StatefulWidget {
   final bool embedded;
   const HistoryScreen({super.key, this.embedded = false});
 
   @override
+  State<HistoryScreen> createState() => _HistoryScreenState();
+}
+
+class _HistoryScreenState extends State<HistoryScreen> {
+  bool _exercises = false;
+
+  void _openWorkout(WorkoutLog log) => Navigator.of(context).push(
+    MaterialPageRoute<void>(builder: (_) => WorkoutDetailScreen(log: log)),
+  );
+
+  @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: embedded ? null : AppBar(title: const Text('Progress')),
+    appBar: widget.embedded ? null : AppBar(title: const Text('Progress')),
     body: SafeArea(
       child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 760),
-          child: BlocBuilder<HistoryBloc, HistoryState>(
-            builder: (context, state) {
-              if (state is HistoryLoading || state is HistoryInitial) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (state is! HistoryLoaded) {
-                return _HistoryMessage(
-                  title: 'History could not load',
-                  message: 'Your saved workouts could not be read. Try again.',
-                  action: TextButton(
-                    onPressed: () =>
-                        context.read<HistoryBloc>().add(LoadHistory()),
-                    child: const Text('Retry loading history'),
-                  ),
-                );
-              }
-              if (state.logs.isEmpty) {
-                return const _HistoryMessage(
-                  title: 'Your progress starts here',
-                  message:
-                      'Finish a workout to see your logged sets and session details here.',
-                );
-              }
-              final summary = HistorySummary.fromLogs(state.logs);
-              final groups = <DateTime, List<WorkoutLog>>{};
-              for (final log in state.logs) {
-                final month = DateTime(log.startTime.year, log.startTime.month);
-                groups.putIfAbsent(month, () => []).add(log);
-              }
-              return CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (embedded) ...[
-                            Text(
-                              'Progress',
-                              style: Theme.of(context).textTheme.headlineMedium,
-                            ),
-                            const SizedBox(height: 24),
-                          ],
-                          _Summary(summary: summary),
-                        ],
-                      ),
+          child: Column(
+            children: [
+              if (widget.embedded)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+                    child: Text(
+                      'Progress',
+                      style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ),
-                  for (final group in groups.entries) ...[
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
-                      sliver: SliverToBoxAdapter(
-                        child: Text(
-                          DateFormat('MMMM yyyy').format(group.key),
-                          style: Theme.of(context).textTheme.titleMedium,
+                ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<bool>(
+                    style: SegmentedButton.styleFrom(
+                      minimumSize: const Size(0, 48),
+                      selectedBackgroundColor: context.colors.primaryAccent,
+                      selectedForegroundColor: context.colors.background,
+                      foregroundColor: context.colors.primaryText,
+                      side: BorderSide(color: context.colors.divider),
+                    ),
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('Workouts')),
+                      ButtonSegment(value: true, label: Text('Exercises')),
+                    ],
+                    selected: {_exercises},
+                    showSelectedIcon: false,
+                    onSelectionChanged: (value) =>
+                        setState(() => _exercises = value.single),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: BlocBuilder<HistoryBloc, HistoryState>(
+                  builder: (context, state) {
+                    if (state is HistoryLoading || state is HistoryInitial) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state is! HistoryLoaded) {
+                      return _HistoryMessage(
+                        title: 'History could not load',
+                        message:
+                            'Your saved workouts could not be read. Try again.',
+                        action: TextButton(
+                          onPressed: () =>
+                              context.read<HistoryBloc>().add(LoadHistory()),
+                          child: const Text('Retry loading history'),
                         ),
-                      ),
-                    ),
-                    SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                      sliver: SliverList.builder(
-                        itemCount: group.value.length,
-                        itemBuilder: (context, index) =>
-                            _HistoryRow(log: group.value[index]),
-                      ),
-                    ),
-                  ],
-                ],
-              );
-            },
+                      );
+                    }
+                    if (state.logs.isEmpty) {
+                      return const _HistoryMessage(
+                        title: 'Your progress starts here',
+                        message:
+                            'Finish a workout to see your logged sets and session details here.',
+                      );
+                    }
+                    if (_exercises) {
+                      return ExerciseProgressList(
+                        exercises: state.exercises,
+                        openWorkout: _openWorkout,
+                      );
+                    }
+                    final summary = HistorySummary.fromLogs(state.logs);
+                    final groups = <DateTime, List<WorkoutLog>>{};
+                    for (final log in state.logs) {
+                      final month = DateTime(
+                        log.startTime.year,
+                        log.startTime.month,
+                      );
+                      groups.putIfAbsent(month, () => []).add(log);
+                    }
+                    return CustomScrollView(
+                      slivers: [
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                          sliver: SliverToBoxAdapter(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [_Summary(summary: summary)],
+                            ),
+                          ),
+                        ),
+                        for (final group in groups.entries) ...[
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
+                            sliver: SliverToBoxAdapter(
+                              child: Text(
+                                DateFormat('MMMM yyyy').format(group.key),
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ),
+                          ),
+                          SliverPadding(
+                            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                            sliver: SliverList.builder(
+                              itemCount: group.value.length,
+                              itemBuilder: (context, index) =>
+                                  _HistoryRow(log: group.value[index]),
+                            ),
+                          ),
+                        ],
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ),
       ),

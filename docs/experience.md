@@ -87,7 +87,7 @@ finish creates no history. There is no separate stored skipped status.
 
 - Today: next/resumable workout and a compact weekly view.
 - Plans: routine, exercise selection, and editing.
-- Progress: exercise trends and session details.
+- Progress: saved workouts and searchable exercise history with best logged sets.
 - Workout: a dedicated flow with an overview, easy return, and explicit finish.
 - Preferences: available from app chrome rather than a fourth main tab.
 - Tablet: workout overview beside the focused exercise when width permits.
@@ -100,6 +100,11 @@ finish creates no history. There is no separate stored skipped status.
   remains when names do not contradict it. Old history is not merged by name; see [exercise-identity.md](exercise-identity.md).
 - All explicitly completed sets, including warm-ups, count toward volume. Suggestions do not.
 - New completed sessions save exercise names independently of future plan edits.
+- Exercise progress groups explicit shared identity across plans and combines repeated entries
+  in one workout into one session. Best sets rank recorded kg first, then reps at that weight.
+  Original set numbers and logged warm-up/drop labels remain visible in expanded sessions.
+  Legacy records stay separate by entry and saved name; no name-based join to newer movements.
+  See [exercise-progress.md](exercise-progress.md) for the rules and remaining scope.
 - Active sessions save the rest deadline. Countdown and duration use wall clock time.
 - Shared identity and session replacement/reordering are implemented. The overview offers explicit move
   actions and replacement before any sets are logged. Logged exercises can move; add another exercise

@@ -5,6 +5,7 @@ import '../../../domain/models/exercise.dart';
 import '../../../domain/models/set_log.dart';
 import '../../../domain/models/workout_log.dart';
 import '../../../domain/exercise_identity.dart';
+import '../../../domain/workout_records.dart';
 import '../../../domain/repositories/workout_repository.dart';
 import '../../../notifications/workout_reminder_scheduler.dart';
 import 'workout_event.dart';
@@ -515,11 +516,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
             .toList();
         if (previous.isEmpty) continue;
         for (final set in entry.value.where((set) => set.isCompleted)) {
-          if (previous.every(
-            (old) =>
-                set.weight > old.weight ||
-                set.weight == old.weight && set.reps > old.reps,
-          )) {
+          if (previous.every((old) => isBetterSet(set, old))) {
             await scheduler.showPersonalRecordNotification(
               '${set.weight} kg × ${set.reps} reps — new best!',
             );
