@@ -288,6 +288,16 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 
 ## Phase 6 release verification
 
+### Popup focus recovery — 18 October 2026
+
+- Exercise pickers/details and plan day/exercise menus now dismiss the active text field before
+  opening. Selecting, saving or cancelling no longer restores the day-name or picker-search keyboard.
+- Fixed the same behavior when returning from exercise progress or Settings to Progress search.
+  Typed values remain intact; main-tab switching already passed and needed no change.
+- All 47 relevant widget tests passed, including five new focus regressions with Android/iOS
+  themes and phone/tablet navigation. Scoped analysis, formatting and actual plan renders passed.
+  No APK build or native-device keyboard validation was run. Phase 6 native acceptance remains open.
+
 ### Next-set weights — 18 October 2026
 
 - Logging a regular set now carries its weight into the next untouched set in that exercise.

@@ -90,6 +90,8 @@ Judge the result through concrete choices, not claims that a design is premium o
 - Keep key actions within comfortable reach and separate destructive actions.
 - Offer large increment/decrement controls and direct entry when needed.
 - Preserve input and focus during rebuilds; avoid moving content while the user types.
+- Before opening exercise dialogs or plan menus, dismiss the active text field so closing the
+  popup does not reopen its keyboard. Keep entered text and explicit tap-to-edit behavior.
 - Show rest with clear skip and extend actions. Keep workout context visible.
 - Use gestures as shortcuts, with visible alternatives.
 - Make mistakes recoverable. Avoid confirmation dialogs for easily reversible actions.

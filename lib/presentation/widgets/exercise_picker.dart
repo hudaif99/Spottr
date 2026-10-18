@@ -11,16 +11,19 @@ Future<Exercise?> showExercisePicker(
   BuildContext context, {
   Iterable<Exercise> localExercises = const [],
   bool replacing = false,
-}) => showDialog<Exercise>(
-  context: context,
-  builder: (_) => BlocProvider(
-    create: (_) => ExerciseLibraryBloc(
-      context.read<WorkoutRepository>(),
-      localExercises: localExercises,
-    )..add(LoadExerciseLibrary()),
-    child: _ExercisePicker(replacing: replacing),
-  ),
-);
+}) {
+  FocusManager.instance.primaryFocus?.unfocus();
+  return showDialog<Exercise>(
+    context: context,
+    builder: (_) => BlocProvider(
+      create: (_) => ExerciseLibraryBloc(
+        context.read<WorkoutRepository>(),
+        localExercises: localExercises,
+      )..add(LoadExerciseLibrary()),
+      child: _ExercisePicker(replacing: replacing),
+    ),
+  );
+}
 
 class _ExercisePicker extends StatefulWidget {
   final bool replacing;

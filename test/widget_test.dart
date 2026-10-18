@@ -6,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:get_it/get_it.dart';
 import 'package:spottr/core/theme/app_theme.dart';
 import 'package:spottr/data/datasources/local_database_service.dart';
 import 'package:spottr/domain/models/exercise.dart';
@@ -39,6 +40,9 @@ import 'support/fake_workout_repository.dart';
 class _Preferences extends LocalDatabaseService {
   @override
   bool getPlayTimerSound() => false;
+
+  @override
+  int getRestTime() => 90;
 }
 
 class _LibraryRepository extends FakeWorkoutRepository {
@@ -98,6 +102,7 @@ void main() {
     Widget screen, {
     Size size = const Size(390, 844),
     bool dark = false,
+    TargetPlatform? platform,
     double textScale = 1,
     bool start = false,
     Plan? initialPlan,
@@ -144,7 +149,9 @@ void main() {
             key: boundary,
             child: MaterialApp(
               debugShowCheckedModeBanner: false,
-              theme: dark ? AppTheme.darkTheme : AppTheme.lightTheme,
+              theme: (dark ? AppTheme.darkTheme : AppTheme.lightTheme).copyWith(
+                platform: platform,
+              ),
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(
                   context,
@@ -393,6 +400,208 @@ void main() {
     expect(tester.takeException(), isNull);
     await unmount(tester);
   });
+
+  for (final platform in [TargetPlatform.android, TargetPlatform.iOS]) {
+    testWidgets('plan popups do not restore text focus on ${platform.name}', (
+      tester,
+    ) async {
+      await mount(tester, const CreatePlanScreen(), platform: platform);
+      final dayField = find.widgetWithText(TextField, 'Workout day');
+      Future<void> focusDay() async {
+        await tester.ensureVisible(dayField);
+        await tester.enterText(dayField, 'Push day');
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+      }
+
+      void expectNoKeyboard() {
+        expect(tester.testTextInput.isVisible, isFalse);
+        expect(
+          tester
+              .widgetList<EditableText>(find.byType(EditableText))
+              .any((field) => field.focusNode.hasFocus),
+          isFalse,
+        );
+        expect(tester.widget<TextField>(dayField).controller!.text, 'Push day');
+      }
+
+      await focusDay();
+      await tester.tap(find.text('Add exercise'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.byKey(ValueKey('pick-${exercises.first.identityId}')),
+      );
+      await tester.pumpAndSettle();
+      expectNoKeyboard();
+      await capture(tester, 'plan-focus-dismissed-${platform.name}');
+
+      await focusDay();
+      await tester.tap(find.text('Add exercise'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Cancel'));
+      await tester.pumpAndSettle();
+      expectNoKeyboard();
+
+      for (final save in [false, true]) {
+        await focusDay();
+        await tester.tap(find.text('Cable kickback'));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.byKey(const ValueKey('Setup note')),
+          'Seat at 3',
+        );
+        if (save) {
+          await tester.ensureVisible(find.text('Save details'));
+          await tester.tap(find.text('Save details'));
+        } else {
+          await tester.tap(find.byTooltip('Cancel'));
+        }
+        await tester.pumpAndSettle();
+        expectNoKeyboard();
+      }
+      expect(find.textContaining('Seat at 3'), findsOneWidget);
+
+      for (final tooltip in ['Day options', 'Cable kickback options']) {
+        await focusDay();
+        await tester.tap(find.byTooltip(tooltip));
+        await tester.pumpAndSettle();
+        await tester.binding.handlePopRoute();
+        await tester.pumpAndSettle();
+        expectNoKeyboard();
+      }
+      await focusDay();
+      await tester.tap(find.byTooltip('Cable kickback options'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit details'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Cancel'));
+      await tester.pumpAndSettle();
+      expectNoKeyboard();
+      await focusDay();
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets('custom editor does not restore picker search focus', (
+    tester,
+  ) async {
+    await mount(
+      tester,
+      Builder(
+        builder: (context) => Scaffold(
+          body: TextButton(
+            onPressed: () => showExercisePicker(context),
+            child: const Text('Choose'),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Choose'));
+    await tester.pumpAndSettle();
+    final search = find.widgetWithText(TextField, 'Search');
+    await tester.enterText(search, 'Trainer movement');
+    await tester.tap(find.text('Create exercise'));
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.byType(TextFormField).first,
+      'Changed movement',
+    );
+    await tester.tap(find.byTooltip('Cancel').last);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isFalse);
+    expect(
+      tester.widget<TextField>(search).controller!.text,
+      'Trainer movement',
+    );
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isFalse,
+    );
+    await tester.tap(search);
+    await tester.pumpAndSettle();
+    expect(tester.testTextInput.isVisible, isTrue);
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
+
+  for (final wide in [false, true]) {
+    testWidgets(
+      'progress navigation does not restore search focus with wide=$wide',
+      (tester) async {
+        GetIt.I.registerSingleton<LocalDatabaseService>(_Preferences());
+        addTearDown(() => GetIt.I.unregister<LocalDatabaseService>());
+        final repo = FakeWorkoutRepository()
+          ..logs.add(
+            WorkoutLog(
+              id: 'logged',
+              planId: plan.id,
+              dayId: day.id,
+              dayName: day.name,
+              startTime: DateTime(2026, 10, 18),
+              exerciseNames: {exercises.first.id: exercises.first.name},
+              exerciseIdentities: {
+                exercises.first.id: exercises.first.identityId,
+              },
+              exerciseLogs: {
+                exercises.first.id: [
+                  SetLog(id: 'set', weight: 20, reps: 10, isCompleted: true),
+                ],
+              },
+            ),
+          );
+        await mount(
+          tester,
+          const HomeScreen(),
+          repository: repo,
+          size: wide ? const Size(1194, 834) : const Size(390, 844),
+        );
+        Finder destination(String label) => find.descendant(
+          of: wide ? find.byType(NavigationRail) : find.byType(NavigationBar),
+          matching: find.text(label),
+        );
+        await tester.tap(destination('Progress'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Exercises'));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Search'),
+          'Cable',
+        );
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isTrue);
+        await tester.tap(find.text(exercises.first.name));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Search'),
+          'Cable',
+        );
+        await tester.tap(find.byTooltip('Settings'));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Search'),
+          'Cable',
+        );
+        await tester.tap(destination('Plans'));
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        await tester.tap(destination('Progress'));
+        await tester.pumpAndSettle();
+        expect(tester.testTextInput.isVisible, isFalse);
+        final search = tester.widget<EditableText>(find.byType(EditableText));
+        expect(search.controller.text, 'Cable');
+        expect(search.focusNode.hasFocus, isFalse);
+        expect(tester.takeException(), isNull);
+        await unmount(tester);
+      },
+    );
+  }
 
   testWidgets(
     'plan additions reuse custom identity while keeping entry details independent',

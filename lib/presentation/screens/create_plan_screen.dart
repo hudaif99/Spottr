@@ -187,6 +187,10 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                                     ),
                                     PopupMenuButton<String>(
                                       tooltip: 'Day options',
+                                      onOpened: () => FocusManager
+                                          .instance
+                                          .primaryFocus
+                                          ?.unfocus(),
                                       onSelected: (_) {
                                         setState(() {
                                           _days.removeAt(dayIndex);
@@ -219,6 +223,10 @@ class _CreatePlanScreenState extends State<CreatePlanScreen> {
                                           _exercise(dayIndex, index: index),
                                       trailing: PopupMenuButton<String>(
                                         tooltip: '${exercise.name} options',
+                                        onOpened: () => FocusManager
+                                            .instance
+                                            .primaryFocus
+                                            ?.unfocus(),
                                         onSelected: (value) {
                                           if (value == 'edit') {
                                             _exercise(dayIndex, index: index);

@@ -63,10 +63,13 @@ class _HomeScreenState extends State<HomeScreen> {
               IconButton(
                 tooltip: 'Settings',
                 icon: const Icon(Icons.tune_rounded),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                ),
+                onPressed: () {
+                  FocusManager.instance.primaryFocus?.unfocus();
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                },
               ),
               const SizedBox(width: 12),
             ],

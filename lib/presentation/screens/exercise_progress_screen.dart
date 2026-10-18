@@ -99,7 +99,7 @@ class _ExerciseProgressListState extends State<ExerciseProgressList> {
                 ),
                 trailing: const Icon(Icons.chevron_right_rounded),
                 onTap: () {
-                  FocusScope.of(context).unfocus();
+                  FocusManager.instance.primaryFocus?.unfocus();
                   Navigator.of(context).push(
                     MaterialPageRoute<void>(
                       builder: (_) => BlocProvider.value(

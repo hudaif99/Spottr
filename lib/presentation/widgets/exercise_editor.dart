@@ -11,16 +11,19 @@ Future<Exercise?> showExerciseEditor(
   bool lockName = false,
   bool replacing = false,
   String initialName = '',
-}) => showDialog<Exercise>(
-  context: context,
-  barrierDismissible: false,
-  builder: (_) => _ExerciseEditor(
-    exercise: exercise,
-    lockName: lockName,
-    replacing: replacing,
-    initialName: initialName,
-  ),
-);
+}) {
+  FocusManager.instance.primaryFocus?.unfocus();
+  return showDialog<Exercise>(
+    context: context,
+    barrierDismissible: false,
+    builder: (_) => _ExerciseEditor(
+      exercise: exercise,
+      lockName: lockName,
+      replacing: replacing,
+      initialName: initialName,
+    ),
+  );
+}
 
 class _ExerciseEditor extends StatefulWidget {
   final Exercise? exercise;
