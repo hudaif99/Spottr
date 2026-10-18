@@ -16,7 +16,7 @@
 | 3. Foundation | Shared UI, models, repositories, migration, session persistence | Focused persistence/migration tests and recoverable failures | Implementation review complete; native acceptance checks remain |
 | 4. Core app | Plans, exercise library, notes, workout logging | Start/log/edit/resume/finish flows verified | Implementation review complete; native acceptance checks remain |
 | 5. Complete | Progress, history, reminders, backup, adaptive polish | Agreed features usable across target layouts | Implementation review complete; native acceptance checks remain |
-| 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Planned |
+| 6. Release | Device/build checks and final review | Android/iOS validation, migration checks, approval to merge | Host tests and Android build passed; native acceptance remains |
 
 Complete each phase with a concise review: what changed, what was verified, and what remains.
 Implementation phases may deliver small end-to-end slices; avoid building unused infrastructure.
@@ -285,6 +285,21 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 - The approved window, suppression rules, pending-request budget and limits are in
   [reminder-scheduling.md](reminder-scheduling.md).
 - Next: define a small, useful exercise-progress view and personal-record rules before implementing charts.
+
+## Phase 6 release verification
+
+### Host tests and Android build — 17 October 2026
+
+- All 175 regression tests passed after cleanup. Full-project analysis is clean, formatting
+  passed for 109 files, and the release-mode Android APK build completed successfully.
+  Results and exact limitations are in [phase-6-verification.md](phase-6-verification.md).
+- Resolved the existing analyzer notices and the observed Kotlin cross-drive incremental-cache
+  failure. Kept dependencies, storage contracts and signing configuration unchanged.
+- No Android device/emulator is available; this Windows host cannot validate an iOS build.
+  Native acceptance steps are in [device-checklist.md](device-checklist.md).
+- Phase 6 remains open. No merge, push or distribution has been performed.
+- The user took over build/device testing. The build had already exited when stop was requested;
+  no further build or APK signature/installation check was run.
 
 ## Reliability backlog from the initial source review
 

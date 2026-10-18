@@ -38,8 +38,8 @@ class SpottrCard extends StatelessWidget {
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(16),
-          splashColor: context.colors.primaryAccent.withOpacity(0.1),
-          highlightColor: context.colors.primaryAccent.withOpacity(0.05),
+          splashColor: context.colors.primaryAccent.withValues(alpha: 0.1),
+          highlightColor: context.colors.primaryAccent.withValues(alpha: 0.05),
           child: cardContent,
         ),
       );

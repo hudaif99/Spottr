@@ -26,27 +26,30 @@ class _SplashScreenState extends State<SplashScreen>
       duration: const Duration(milliseconds: 600),
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 0.85,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
 
     _controller.forward().then((_) {
       Future.delayed(const Duration(milliseconds: 300), () {
         if (mounted) {
-          final isCompleted =
-              GetIt.I<LocalDatabaseService>().isOnboardingCompleted();
-          final destination =
-              isCompleted ? const HomeScreen() : const OnboardingFlowScreen();
+          final isCompleted = GetIt.I<LocalDatabaseService>()
+              .isOnboardingCompleted();
+          final destination = isCompleted
+              ? const HomeScreen()
+              : const OnboardingFlowScreen();
 
           Navigator.of(context).pushReplacement(
             PageRouteBuilder(
-              pageBuilder: (_, __, ___) => destination,
+              pageBuilder: (_, _, _) => destination,
               transitionDuration: const Duration(milliseconds: 400),
-              transitionsBuilder: (_, animation, __, child) {
+              transitionsBuilder: (_, animation, _, child) {
                 return FadeTransition(opacity: animation, child: child);
               },
             ),

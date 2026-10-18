@@ -16,8 +16,8 @@ void main() async {
       exerciseLogs: {"ex1": []},
     );
     await db.saveWorkoutLog(log);
-    print("Saved successfully");
+    debugPrint("Saved successfully");
   } catch (e) {
-    print("Error saving: $e");
+    debugPrint("Error saving: $e");
   }
 }

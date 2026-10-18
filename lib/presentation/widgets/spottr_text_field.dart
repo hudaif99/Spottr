@@ -51,7 +51,7 @@ class SpottrTextField extends StatelessWidget {
           decoration: InputDecoration(
             hintText: hintText,
             hintStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: context.colors.secondaryText.withOpacity(0.5),
+              color: context.colors.secondaryText.withValues(alpha: 0.5),
             ),
             filled: true,
             fillColor: context.colors.surface,
