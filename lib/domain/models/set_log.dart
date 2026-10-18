@@ -11,6 +11,7 @@ class SetLog {
   final bool isCompleted;
   final bool isWarmup;
   final bool isDropSet;
+  final bool canInheritWeight;
 
   SetLog({
     required this.id,
@@ -19,6 +20,7 @@ class SetLog {
     this.isCompleted = false,
     this.isWarmup = false,
     this.isDropSet = false,
+    this.canInheritWeight = false,
   });
 
   SetLog copyWith({
@@ -28,6 +30,7 @@ class SetLog {
     bool? isCompleted,
     bool? isWarmup,
     bool? isDropSet,
+    bool? canInheritWeight,
   }) {
     return SetLog(
       id: id ?? this.id,
@@ -36,6 +39,9 @@ class SetLog {
       isCompleted: isCompleted ?? this.isCompleted,
       isWarmup: isWarmup ?? this.isWarmup,
       isDropSet: isDropSet ?? this.isDropSet,
+      // Explicit weight edits stop automatic suggestions, including 0 kg.
+      canInheritWeight:
+          canInheritWeight ?? (weight == null && this.canInheritWeight),
     );
   }
 }

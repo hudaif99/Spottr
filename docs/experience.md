@@ -29,6 +29,8 @@ Onboarding keeps five steps with back navigation, scrollable content, accessible
 selection and platform-specific time pickers. Reminders are enabled only after permission
 is granted; Not now and denial leave them off. Setup waits for schedule persistence and
 rescheduling before marking onboarding complete, with busy states and retryable errors.
+If storage succeeds but reminders fail, setup shows that distinction and offers Continue to
+Spottr; the user can retry reminders in Settings. A real storage failure still blocks completion.
 Failed completion writes can retry without saving the schedule again. No reminder-date
 algorithms or Hive fields changed.
 
@@ -102,6 +104,11 @@ finish creates no history. There is no separate stored skipped status.
 - Session edits and added exercises affect that session. The plan editor makes permanent changes.
 - Suggestions use the latest completed matching exercise identity across plans; legacy same-entry fallback
   remains when names do not contradict it. Old history is not merged by name; see [exercise-identity.md](exercise-identity.md).
+- On first completion, the logged weight fills the next untouched regular set in that exercise.
+  Equal history suggestions can follow the new weight; different historical weights retain their targets.
+  Manual weight edits, including 0 kg, disable inheritance for that set. Reps-only edits do not.
+  Completed sets and warm-up/drop sets are protected. Reps and other exercises remain unchanged.
+  Eligibility persists through resume and backup/restore; older saved sessions retain their values.
 - All explicitly completed sets, including warm-ups, count toward volume. Suggestions do not.
 - New completed sessions save exercise names independently of future plan edits.
 - Exercise progress groups explicit shared identity across plans and combines repeated entries

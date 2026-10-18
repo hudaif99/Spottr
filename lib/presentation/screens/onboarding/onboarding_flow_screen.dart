@@ -25,6 +25,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
   bool _requesting = false;
   bool _finishing = false;
   bool _scheduleSaved = false;
+  bool _remindersFailed = false;
   TimeOfDay _time = const TimeOfDay(hour: 6, minute: 0);
   final _days = <int>[];
   String _permissionStatus = 'undetermined';
@@ -64,6 +65,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         _permissionStatus = granted ? 'granted' : 'denied';
         _requesting = false;
         _scheduleSaved = false;
+        _remindersFailed = false;
       });
       _go(4);
     } catch (_) {
@@ -78,6 +80,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
       setState(() {
         _time = selected;
         _scheduleSaved = false;
+        _remindersFailed = false;
       });
     }
   }
@@ -137,12 +140,16 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
         _pendingSchedule = null;
         _scheduleSaved = true;
         _complete();
-      } else if (state is ScheduleError) {
+      } else if (state is ScheduleError &&
+          identical(state.retrySchedule, _pendingSchedule)) {
+        final saved = identical(state.schedule, _pendingSchedule);
         setState(() {
           _finishing = false;
           _pendingSchedule = null;
+          _scheduleSaved = saved;
+          _remindersFailed = saved;
         });
-        _error('Could not save your schedule. Try again.');
+        if (!saved) _error(state.message);
       }
     },
     child: PopScope(
@@ -255,6 +262,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                                         ? _days.add(i + 1)
                                         : _days.remove(i + 1);
                                     _scheduleSaved = false;
+                                    _remindersFailed = false;
                                   }),
                                 ),
                             ],
@@ -287,6 +295,7 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                                         setState(() {
                                           _permissionStatus = 'undetermined';
                                           _scheduleSaved = false;
+                                          _remindersFailed = false;
                                         });
                                         _go(4);
                                       },
@@ -301,8 +310,15 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                           title: 'Ready for your first set',
                           description:
                               'Create your plan next. Your training preferences can always be changed in Settings.',
+                          content: _remindersFailed
+                              ? const Text(
+                                  'Your schedule is saved, but reminders could not update. Continue to Spottr and retry them in Settings.',
+                                )
+                              : null,
                           action: SpottrButton(
-                            text: 'Start using Spottr',
+                            text: _remindersFailed
+                                ? 'Continue to Spottr'
+                                : 'Start using Spottr',
                             isLoading: _finishing,
                             onPressed: _moving ? null : _finish,
                           ),

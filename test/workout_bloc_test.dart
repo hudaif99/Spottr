@@ -88,6 +88,207 @@ void main() {
     );
   }
 
+  test('logged weight carries through untouched zero-default sets', () async {
+    final fresh = Exercise(id: 'fresh', name: 'Cable row');
+    final freshDay = WorkoutDay(
+      id: 'fresh-day',
+      name: 'Pull',
+      exercises: [fresh],
+    );
+    await settle(bloc, StartWorkout(plan: plan, day: freshDay));
+    var sets = repository.active!.exerciseLogs[fresh.id]!;
+    expect(sets.map((set) => set.weight), [0, 0, 0]);
+    await settle(
+      bloc,
+      UpdateSet(exerciseId: fresh.id, setLog: sets.first.copyWith(weight: 20)),
+    );
+    await settle(
+      bloc,
+      SetCompletion(
+        exerciseId: fresh.id,
+        setId: sets.first.id,
+        completed: true,
+      ),
+    );
+    sets = repository.active!.exerciseLogs[fresh.id]!;
+    expect(sets.map((set) => set.weight), [20, 20, 0]);
+    expect(sets[1].isCompleted, isFalse);
+    await settle(
+      bloc,
+      AdjustSet(exerciseId: fresh.id, setId: sets[1].id, repsDelta: 2),
+    );
+    await settle(
+      bloc,
+      SetCompletion(exerciseId: fresh.id, setId: sets[1].id, completed: true),
+    );
+    sets = repository.active!.exerciseLogs[fresh.id]!;
+    expect(sets.map((set) => set.weight), [20, 20, 20]);
+    expect(sets[2].reps, fresh.targetReps);
+    expect(sets[2].isCompleted, isFalse);
+    expect(repository.logs, isEmpty);
+  });
+
+  for (final manual in [0.0, 40.0]) {
+    test('carry-forward preserves manually entered $manual kg', () async {
+      await start();
+      final sets = repository.active!.exerciseLogs[exercise.id]!;
+      await settle(
+        bloc,
+        UpdateSet(
+          exerciseId: exercise.id,
+          setLog: sets[1].copyWith(weight: manual),
+        ),
+      );
+      await settle(
+        bloc,
+        UpdateSet(
+          exerciseId: exercise.id,
+          setLog: sets[0].copyWith(weight: 25, isCompleted: true),
+        ),
+      );
+      expect(repository.active!.exerciseLogs[exercise.id]![1].weight, manual);
+      expect(
+        repository.active!.exerciseLogs[exercise.id]![1].canInheritWeight,
+        isFalse,
+      );
+    });
+  }
+
+  test(
+    'history weight changes stay distinct while equal following sets inherit',
+    () async {
+      repository.logs.add(
+        WorkoutLog(
+          id: 'previous',
+          planId: plan.id,
+          dayId: day.id,
+          dayName: day.name,
+          startTime: now.subtract(const Duration(days: 1)),
+          exerciseLogs: {
+            exercise.id: [
+              SetLog(id: 'one', weight: 10, reps: 8, isCompleted: true),
+              SetLog(id: 'two', weight: 20, reps: 6, isCompleted: true),
+              SetLog(id: 'three', weight: 20, reps: 5, isCompleted: true),
+            ],
+          },
+        ),
+      );
+      await start();
+      var sets = repository.active!.exerciseLogs[exercise.id]!;
+      await settle(
+        bloc,
+        UpdateSet(
+          exerciseId: exercise.id,
+          setLog: sets[0].copyWith(weight: 15, isCompleted: true),
+        ),
+      );
+      sets = repository.active!.exerciseLogs[exercise.id]!;
+      expect(sets.map((set) => set.weight), [15, 20, 20]);
+      await settle(
+        bloc,
+        UpdateSet(
+          exerciseId: exercise.id,
+          setLog: sets[1].copyWith(weight: 25, isCompleted: true),
+        ),
+      );
+      sets = repository.active!.exerciseLogs[exercise.id]!;
+      expect(sets.map((set) => set.weight), [15, 25, 25]);
+      expect(sets[2].reps, 5);
+    },
+  );
+
+  test(
+    'completed sets and correcting an already logged set never propagate',
+    () async {
+      await start();
+      var sets = repository.active!.exerciseLogs[exercise.id]!;
+      await settle(
+        bloc,
+        SetCompletion(
+          exerciseId: exercise.id,
+          setId: sets[1].id,
+          completed: true,
+        ),
+      );
+      await settle(
+        bloc,
+        UpdateSet(
+          exerciseId: exercise.id,
+          setLog: sets[0].copyWith(weight: 30, isCompleted: true),
+        ),
+      );
+      sets = repository.active!.exerciseLogs[exercise.id]!;
+      expect(sets[1].weight, 12.5);
+      expect(sets[1].isCompleted, isTrue);
+      await settle(
+        bloc,
+        UpdateSet(
+          exerciseId: exercise.id,
+          setLog: sets[0].copyWith(weight: 35),
+        ),
+      );
+      expect(repository.active!.exerciseLogs[exercise.id]![2].weight, 12.5);
+    },
+  );
+
+  for (final warmup in [true, false]) {
+    for (final flaggedIndex in [0, 1]) {
+      test(
+        '${warmup ? 'warm-up' : 'drop'} set at $flaggedIndex prevents carry-forward',
+        () async {
+          await start();
+          var sets = repository.active!.exerciseLogs[exercise.id]!;
+          await settle(
+            bloc,
+            UpdateSet(
+              exerciseId: exercise.id,
+              setLog: sets[flaggedIndex].copyWith(
+                isWarmup: warmup,
+                isDropSet: !warmup,
+              ),
+            ),
+          );
+          sets = repository.active!.exerciseLogs[exercise.id]!;
+          await settle(
+            bloc,
+            UpdateSet(
+              exerciseId: exercise.id,
+              setLog: sets.first.copyWith(weight: 25, isCompleted: true),
+            ),
+          );
+          expect(repository.active!.exerciseLogs[exercise.id]![1].weight, 12.5);
+        },
+      );
+    }
+  }
+
+  test(
+    'failed carry-forward saves remain retryable with both set values',
+    () async {
+      await start();
+      final set = repository.active!.exerciseLogs[exercise.id]!.first;
+      repository.failSave = true;
+      await settle(
+        bloc,
+        UpdateSet(
+          exerciseId: exercise.id,
+          setLog: set.copyWith(weight: 25, isCompleted: true),
+        ),
+      );
+      final retained = bloc.state as WorkoutInProgress;
+      expect(retained.errorMessage, isNotNull);
+      expect(retained.exerciseLogs[exercise.id]![1].weight, 25);
+      repository.failSave = false;
+      await settle(bloc, RetryWorkoutSave());
+      expect(
+        repository.active!.exerciseLogs[exercise.id]!
+            .take(2)
+            .map((set) => set.weight),
+        [25, 25],
+      );
+    },
+  );
+
   test(
     'start, cancel, empty finish and saved finish all refresh reminders after persistence',
     () async {

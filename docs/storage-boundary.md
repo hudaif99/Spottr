@@ -49,3 +49,14 @@ Shared identity was then implemented with additive fields; see [exercise-identit
 Storage
 records must stay backward compatible until any future migration has explicit compatibility tests.
 Settings still use their existing service boundary; this extraction adds no speculative infrastructure.
+
+## Weight suggestions — 18 October 2026
+
+SetLog now adds Hive field 6, `canInheritWeight`, with a false default. Type ID 0 and fields
+0–5 are unchanged. The adapter was regenerated with build_runner. New session suggestions
+explicitly enable inheritance where appropriate; manual weight edits disable it. Old records
+without this field remain readable and preserve their weights conservatively.
+
+Repository mapping preserves eligibility. Real-file tests cover automatic suggestions and manual
+0 kg edits through reopen/resume; backup export/restore retains the flag. Classic six-field fixtures
+verify the missing-field default. No history, plan or existing active-session values are rewritten.

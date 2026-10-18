@@ -59,6 +59,8 @@ Accounts, social feeds, nutrition, and AI coaching are outside the proposed firs
 
 - Start the next planned workout from Today with one tap.
 - Complete a prefilled set with one tap; no keyboard required when values are unchanged.
+- Logging a set carries its weight into the next untouched regular set. Preserve manual weights,
+  different historical weight targets, completed sets and warm-up/drop sets; leave reps unchanged.
 - See the current exercise, note, previous performance, and next action with minimal navigation.
 - Correct mistakes and change exercises without abandoning the session.
 - Resume the latest persisted session after restarting the app.

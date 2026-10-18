@@ -64,6 +64,11 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
           id: _uuid.v4(),
           reps: suggestion?.reps ?? exercise.targetReps,
           weight: suggestion?.weight ?? exercise.targetWeight ?? 0,
+          canInheritWeight:
+              suggestion == null ||
+              index == 0 ||
+              suggestion.weight ==
+                  previous[(index - 1).clamp(0, previous.length - 1)].weight,
         );
       });
 
@@ -413,6 +418,7 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
           id: _uuid.v4(),
           weight: sets.lastOrNull?.weight ?? exercise.targetWeight ?? 0,
           reps: sets.lastOrNull?.reps ?? exercise.targetReps,
+          canInheritWeight: true,
         ),
       );
     } else if (event is UpdateSet) {
@@ -429,6 +435,21 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
           (exercise) => exercise.id == exerciseId,
         );
         restUntil = _now().add(Duration(seconds: exercise.restDurationSeconds));
+        final nextIndex = index + 1;
+        if (nextIndex < sets.length &&
+            !event.setLog.isWarmup &&
+            !event.setLog.isDropSet) {
+          final next = sets[nextIndex];
+          if (!next.isCompleted &&
+              next.canInheritWeight &&
+              !next.isWarmup &&
+              !next.isDropSet) {
+            sets[nextIndex] = next.copyWith(
+              weight: event.setLog.weight,
+              canInheritWeight: true,
+            );
+          }
+        }
       }
       sets[index] = event.setLog;
     } else if (event is RemoveSet) {
@@ -455,7 +476,9 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       return UpdateSet(
         exerciseId: event.exerciseId,
         setLog: set.copyWith(
-          weight: (set.weight + event.weightDelta).clamp(0, 2000).toDouble(),
+          weight: event.weightDelta == 0
+              ? null
+              : (set.weight + event.weightDelta).clamp(0, 2000).toDouble(),
           reps: (set.reps + event.repsDelta).clamp(0, 2000),
         ),
       );

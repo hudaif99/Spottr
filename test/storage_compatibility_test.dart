@@ -10,6 +10,26 @@ import 'package:spottr/data/models/workout_day.dart';
 import 'package:spottr/data/models/workout_log.dart';
 import 'package:spottr/data/repositories/workout_repository_impl.dart';
 
+class _ClassicSetAdapter extends SetLogAdapter {
+  @override
+  void write(BinaryWriter writer, SetLog set) {
+    writer
+      ..writeByte(6)
+      ..writeByte(0)
+      ..write(set.id)
+      ..writeByte(1)
+      ..write(set.reps)
+      ..writeByte(2)
+      ..write(set.weight)
+      ..writeByte(3)
+      ..write(set.isCompleted)
+      ..writeByte(4)
+      ..write(set.isWarmup)
+      ..writeByte(5)
+      ..write(set.isDropSet);
+  }
+}
+
 class _ClassicExerciseAdapter extends ExerciseAdapter {
   @override
   void write(BinaryWriter writer, Exercise exercise) {
@@ -132,7 +152,7 @@ void main() {
         await directory.delete(recursive: true);
       });
       Hive.init(directory.path);
-      Hive.registerAdapter(SetLogAdapter());
+      Hive.registerAdapter(_ClassicSetAdapter());
       Hive.registerAdapter(_ClassicExerciseAdapter());
       Hive.registerAdapter(WorkoutDayAdapter());
       Hive.registerAdapter(PlanAdapter());
@@ -180,6 +200,7 @@ void main() {
         ),
       );
       await Hive.close();
+      Hive.registerAdapter<SetLog>(SetLogAdapter(), override: true);
       Hive.registerAdapter<Exercise>(ExerciseAdapter(), override: true);
       Hive.registerAdapter<WorkoutLog>(WorkoutLogAdapter(), override: true);
       Hive.registerAdapter<ActiveWorkout>(
@@ -214,6 +235,14 @@ void main() {
       expect(mappedLog.exerciseIdentities, isEmpty);
       expect(mappedLog.totalVolume, 125);
       expect(mappedActive.exerciseLogs['exercise']!.single.id, 'set');
+      expect(
+        mappedActive.exerciseLogs['exercise']!.single.canInheritWeight,
+        isFalse,
+      );
+      expect(
+        mappedLog.exerciseLogs['exercise']!.single.canInheritWeight,
+        isFalse,
+      );
       await repository.savePlan(mappedPlan);
       await repository.saveWorkoutLog(mappedLog);
       await repository.saveActiveWorkout(mappedActive);

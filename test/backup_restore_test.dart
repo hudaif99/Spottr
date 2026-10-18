@@ -111,7 +111,14 @@ void main() {
           day: day,
           startTime: date,
           exerciseLogs: {
-            'exercise': [SetLog(id: 'pending', reps: 10, weight: 12.5)],
+            'exercise': [
+              SetLog(
+                id: 'pending',
+                reps: 10,
+                weight: 12.5,
+                canInheritWeight: true,
+              ),
+            ],
           },
           restUntil: date.add(const Duration(seconds: 90)),
         ),
@@ -148,6 +155,14 @@ void main() {
       expect(
         repository.getActiveWorkout()!.restUntil,
         date.add(const Duration(seconds: 90)),
+      );
+      expect(
+        repository
+            .getActiveWorkout()!
+            .exerciseLogs['exercise']!
+            .single
+            .canInheritWeight,
+        isTrue,
       );
       expect(await Directory('${root.path}/.spottr_restore').exists(), isFalse);
     },

@@ -471,6 +471,56 @@ void main() {
     );
   }
 
+  for (final (size, scale, dark, suffix) in [
+    (const Size(390, 844), 1.0, false, 'light'),
+    (const Size(320, 568), 1.8, true, 'large-text-dark'),
+    (const Size(1194, 834), 1.0, false, 'tablet'),
+  ]) {
+    testWidgets(
+      'onboarding can continue after saved schedule reminder failure in $suffix',
+      (tester) async {
+        permission.granted = true;
+        await mount(
+          tester,
+          const OnboardingFlowScreen(),
+          size: size,
+          scale: scale,
+          dark: dark,
+        );
+        await toNotifications(tester);
+        await tap(tester, inStep('notifications', 'Allow notifications'));
+        reminderScheduler.fail = true;
+        await tap(tester, inStep('finish', 'Start using Spottr'));
+        expect(schedules.writes, 1);
+        expect(schedules.schedule!.remindersEnabled, isTrue);
+        expect(prefs.completionWrites, 0);
+        expect(
+          find.text('Could not save your schedule. Try again.'),
+          findsNothing,
+        );
+        expect(
+          find.text(
+            'Your schedule is saved, but reminders could not update. Continue to Spottr and retry them in Settings.',
+          ),
+          findsOneWidget,
+        );
+        await tester.ensureVisible(inStep('finish', 'Continue to Spottr'));
+        await tester.pumpAndSettle();
+        await capture(tester, 'onboarding-reminder-failure-$suffix');
+        await tap(tester, inStep('finish', 'Continue to Spottr'));
+        expect(schedules.writes, 1);
+        expect(prefs.completionWrites, 1);
+        expect(find.text('Create a plan'), findsOneWidget);
+        final state = tester
+            .element(find.text('Create a plan'))
+            .read<ScheduleBloc>()
+            .state;
+        expect(state, isA<ScheduleError>());
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('onboarding retries repeated save errors and completion errors', (
     tester,
   ) async {

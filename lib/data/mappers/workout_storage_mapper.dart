@@ -45,6 +45,7 @@ extension StoredSetMapping on SetLog {
     isCompleted: isCompleted,
     isWarmup: isWarmup,
     isDropSet: isDropSet,
+    canInheritWeight: canInheritWeight,
   );
 }
 
@@ -56,6 +57,7 @@ extension SetStorageMapping on domain.SetLog {
     isCompleted: isCompleted,
     isWarmup: isWarmup,
     isDropSet: isDropSet,
+    canInheritWeight: canInheritWeight,
   );
 }
 

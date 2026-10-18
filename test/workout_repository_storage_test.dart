@@ -388,6 +388,23 @@ void main() {
           exercise.id,
         );
         expect(resumed.exerciseLogs['cable']!.first.weight, 15);
+        expect(resumed.exerciseLogs['cable']![1].weight, 15);
+        expect(resumed.exerciseLogs['cable']![1].canInheritWeight, isTrue);
+        await apply(
+          UpdateSet(
+            exerciseId: 'cable',
+            setLog: resumed.exerciseLogs['cable']![1].copyWith(weight: 0),
+          ),
+          ready,
+        );
+        await bloc.close();
+        await reopen();
+        bloc = WorkoutBloc(repository, null, () => now);
+        await apply(ResumeWorkout(), ready);
+        final manual =
+            (bloc.state as WorkoutInProgress).exerciseLogs['cable']![1];
+        expect(manual.weight, 0);
+        expect(manual.canInheritWeight, isFalse);
         await apply(FinishWorkout(), (state) => state is WorkoutInitial);
         await reopen();
         expect(repository.getActiveWorkout(), isNull);

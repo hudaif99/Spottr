@@ -22,6 +22,9 @@ class SetLog extends HiveObject {
   @HiveField(5)
   final bool isDropSet;
 
+  @HiveField(6, defaultValue: false)
+  final bool canInheritWeight;
+
   SetLog({
     required this.id,
     this.reps = 0,
@@ -29,6 +32,7 @@ class SetLog extends HiveObject {
     this.isCompleted = false,
     this.isWarmup = false,
     this.isDropSet = false,
+    this.canInheritWeight = false,
   });
 
   SetLog copyWith({
@@ -38,6 +42,7 @@ class SetLog extends HiveObject {
     bool? isCompleted,
     bool? isWarmup,
     bool? isDropSet,
+    bool? canInheritWeight,
   }) {
     return SetLog(
       id: id ?? this.id,
@@ -46,6 +51,8 @@ class SetLog extends HiveObject {
       isCompleted: isCompleted ?? this.isCompleted,
       isWarmup: isWarmup ?? this.isWarmup,
       isDropSet: isDropSet ?? this.isDropSet,
+      canInheritWeight:
+          canInheritWeight ?? (weight == null && this.canInheritWeight),
     );
   }
 }

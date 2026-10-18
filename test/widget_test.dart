@@ -33,6 +33,7 @@ import 'package:spottr/presentation/screens/create_plan_screen.dart';
 import 'package:spottr/presentation/widgets/spottr_button.dart';
 import 'package:spottr/presentation/widgets/exercise_editor.dart';
 import 'package:spottr/presentation/widgets/exercise_picker.dart';
+import 'package:spottr/presentation/widgets/workout_value_control.dart';
 import 'support/fake_workout_repository.dart';
 
 class _Preferences extends LocalDatabaseService {
@@ -824,6 +825,56 @@ void main() {
       await unmount(tester);
     });
   }
+
+  testWidgets(
+    'logging a zero-default exercise carries its weight into the next set',
+    (tester) async {
+      final fresh = Exercise(id: 'fresh', name: 'Cable row');
+      final freshDay = WorkoutDay(
+        id: 'fresh-day',
+        name: 'Pull',
+        exercises: [fresh],
+      );
+      final freshPlan = Plan(
+        id: 'fresh-plan',
+        name: 'Pull routine',
+        isActive: true,
+        days: [freshDay],
+      );
+      final (repo, _) = await mount(
+        tester,
+        const HomeScreen(),
+        initialPlan: freshPlan,
+      );
+      await tester.tap(find.text('Start workout'));
+      await tester.pumpAndSettle();
+      final weight = find.byWidgetPredicate(
+        (widget) =>
+            widget is WorkoutValueControl && widget.label == 'Weight · kg',
+      );
+      expect(tester.widget<WorkoutValueControl>(weight).value, 0);
+      await tester.tap(
+        find.descendant(of: weight, matching: find.byType(TextButton)),
+      );
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextFormField), '25');
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Log set 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Log set 2'), findsOneWidget);
+      expect(tester.widget<WorkoutValueControl>(weight).value, 25);
+      expect(repo.active!.exerciseLogs[fresh.id]![1].isCompleted, isFalse);
+      await tester.tap(find.byTooltip('Increase Weight · kg'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Log set 2'));
+      await tester.pumpAndSettle();
+      expect(find.text('Log set 3'), findsOneWidget);
+      expect(tester.widget<WorkoutValueControl>(weight).value, 27.5);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
 
   testWidgets('focused workout logs, undoes, and retains the setup cue', (
     tester,

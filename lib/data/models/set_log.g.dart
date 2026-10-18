@@ -23,13 +23,14 @@ class SetLogAdapter extends TypeAdapter<SetLog> {
       isCompleted: fields[3] as bool,
       isWarmup: fields[4] as bool,
       isDropSet: fields[5] as bool,
+      canInheritWeight: fields[6] == null ? false : fields[6] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, SetLog obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -41,7 +42,9 @@ class SetLogAdapter extends TypeAdapter<SetLog> {
       ..writeByte(4)
       ..write(obj.isWarmup)
       ..writeByte(5)
-      ..write(obj.isDropSet);
+      ..write(obj.isDropSet)
+      ..writeByte(6)
+      ..write(obj.canInheritWeight);
   }
 
   @override

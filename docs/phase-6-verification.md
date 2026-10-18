@@ -47,6 +47,31 @@ Local logs are under ignored `build/verification/`: `flutter-tests.log`,
 
 ## Distribution and native acceptance
 
+### Next-set weight follow-up — 18 October 2026
+
+Logged weights now carry into the next untouched regular set. Tests cover zero-default sets,
+manual 0 kg entries, distinct history targets, completed-set corrections, warm-up/drop protection,
+save failure/retry, real-file resume, classic storage and backup restoration. The logging/storage/widget
+run passed 80 tests; a follow-up with added set-type guards and backup checks passed 53 tests
+(logging coverage overlaps). Scoped analysis of ten changed Dart files and formatting passed.
+No APK build or native device test was run. Old active sessions retain their values; start a new
+workout after upgrading to exercise the new suggestion behavior.
+
+### Follow-up — 18 October 2026
+
+The user hit the onboarding save message after granting notifications in an installed APK.
+The UI was reproducing the wrong message for a scheduler exception after successful persistence.
+It now distinguishes these cases and permits explicit continuation after the schedule is safely
+stored, retaining reminder retry in Settings. Real save failures still block setup completion.
+
+The Android app also lacked the release Gson/TypeToken keep rules documented in the notification
+plugin's [v18.0.1 example](https://github.com/MaikuB/flutter_local_notifications/blob/flutter_local_notifications-v18.0.1/flutter_local_notifications/example/android/app/proguard-rules.pro).
+Added those rules, kept notification model fields and retained the notification icon resource.
+This is a likely release-specific cause, not a confirmed diagnosis of the device exception.
+All 27 focused settings/onboarding tests, scoped Dart analysis, formatting and diff checks passed.
+Reviewed actual light/dark, large-text and tablet failure-state renders. No new APK was built;
+the updated release APK still needs a device retest. A debug run may not reproduce an R8 issue.
+
 The APK's signature, installation and runtime behavior were not checked after the user took over
 build/device testing. The existing release build type uses the debug signing configuration. A successful release-mode
 build is therefore a local test artifact, not a store-ready signed release or proof of a safe

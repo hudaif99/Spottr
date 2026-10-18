@@ -288,6 +288,30 @@ separate product decisions. Preserve current recovery, persistence and Hive cont
 
 ## Phase 6 release verification
 
+### Next-set weights — 18 October 2026
+
+- Logging a regular set now carries its weight into the next untouched set in that exercise.
+  Manual weights, different history targets, completed sets and warm-up/drop sets remain protected.
+- A backward-compatible SetLog field records eligibility across resume and backup/restore.
+  Older saved sessions keep their existing weights; newly started sessions use the new behavior.
+- Logging/storage/widget checks passed all 80 tests. The follow-up run with additional set-type
+  guards and backup restoration passed all 53 tests, including overlapping logging coverage.
+  Scoped analysis and formatting are clean. No APK build was run; device testing stays with the user.
+
+### Installed-APK onboarding fix — 18 October 2026
+
+- The user reported onboarding failing after allowing notifications in an installed APK.
+- Found missing Android release keep rules required by the notification plugin's Gson-based
+  scheduling cache, and an onboarding listener that mislabeled reminder failures as save failures.
+- Added scoped notification/Gson rules and notification-icon resource retention. A rebuilt APK
+  is needed to validate the suspected native cause; no device exception log was available.
+- Onboarding now reports genuine persistence failures accurately. When the schedule was saved,
+  it offers Continue to Spottr without rewriting it; reminder failure/retry remains visible in Settings.
+- Verification: all 27 focused settings/onboarding tests passed, including three new saved-schedule
+  failure cases in light, compact large-text dark and tablet layouts. Scoped analysis, formatting
+  and diff whitespace checks passed. Actual error-state Flutter renders were reviewed.
+- No APK build was run, following the user's instruction to handle builds themselves.
+
 ### Host tests and Android build — 17 October 2026
 
 - All 175 regression tests passed after cleanup. Full-project analysis is clean, formatting
