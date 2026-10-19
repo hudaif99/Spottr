@@ -10,6 +10,7 @@ import '../blocs/history/history_event.dart';
 import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_state.dart';
 import '../widgets/workout_value_control.dart';
+import '../widgets/training_heading.dart';
 import '../formatters/workout_duration.dart';
 import 'exercise_progress_screen.dart';
 
@@ -45,9 +46,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       alignment: Alignment.centerLeft,
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-                        child: Text(
-                          'Progress',
-                          style: Theme.of(context).textTheme.headlineMedium,
+                        child: const TrainingHeading(
+                          title: 'Progress',
+                          icon: Icons.stacked_line_chart_rounded,
                         ),
                       ),
                     ),

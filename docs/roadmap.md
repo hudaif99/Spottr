@@ -1,5 +1,18 @@
 # Spottr redesign roadmap
 
+## App-wide visual consistency — 19 October 2026
+
+- Scope expanded by the user from Active Workout to the overall app appearance.
+- Unified charcoal/chalk/orange themes, stronger Outfit headings and training navigation icons.
+- Today gains a dark training panel; Plans and Progress adopt shared athletic heading treatment.
+  Settings, onboarding and editors inherit the same type and palette. Workout keeps its curved dock.
+- No storage, history, final-set-only or session-rule changes; no migration or backend required.
+- Passed 92 widget checks across workout/Today/plans, history, settings and onboarding; scoped
+  analysis and formatting passed. Reviewed rendered Today, Plans, Progress, Settings and Workout
+  captures including light/dark and large-text variants. Main text/action contrast pairs measure
+  5.43:1 or higher. Native keyboard/device, screen-reader and iOS verification remains open.
+
+
 ## Flutter refinement and final-set logging — 19 October 2026
 
 - User accepted the anchor direction and requested no further mockups. Kept the curved logging

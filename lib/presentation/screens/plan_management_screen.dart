@@ -5,6 +5,7 @@ import '../blocs/plans/plans_bloc.dart';
 import '../blocs/plans/plans_event.dart';
 import '../blocs/plans/plans_state.dart';
 import '../widgets/spottr_button.dart';
+import '../widgets/training_heading.dart';
 import 'create_plan_screen.dart';
 
 class PlanManagementScreen extends StatelessWidget {
@@ -41,9 +42,9 @@ class PlanManagementScreen extends StatelessWidget {
               return ListView(
                 padding: const EdgeInsets.all(24),
                 children: [
-                  Text(
-                    'Your plans',
-                    style: Theme.of(context).textTheme.headlineMedium,
+                  const TrainingHeading(
+                    title: 'Your plans',
+                    icon: Icons.fitness_center_rounded,
                   ),
                   const SizedBox(height: 8),
                   const Text('Choose a routine or build your own.'),
@@ -67,8 +68,15 @@ class PlanManagementScreen extends StatelessWidget {
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
                           color: context.colors.surface,
-                          border: Border.all(color: context.colors.divider),
-                          borderRadius: BorderRadius.circular(18),
+                          border: Border(
+                            top: BorderSide(
+                              color: plan.isActive
+                                  ? context.colors.primaryAccent
+                                  : context.colors.divider,
+                              width: 3,
+                            ),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

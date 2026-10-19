@@ -99,7 +99,8 @@ void main() {
     await (FontLoader('Outfit')
           ..addFont(rootBundle.load('assets/fonts/Outfit-Regular.ttf'))
           ..addFont(rootBundle.load('assets/fonts/Outfit-Medium.ttf'))
-          ..addFont(rootBundle.load('assets/fonts/Outfit-SemiBold.ttf')))
+          ..addFont(rootBundle.load('assets/fonts/Outfit-SemiBold.ttf'))
+          ..addFont(rootBundle.load('assets/fonts/Outfit-Bold.ttf')))
         .load();
     await (FontLoader(
       'MaterialIcons',

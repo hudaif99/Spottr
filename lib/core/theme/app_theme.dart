@@ -16,15 +16,15 @@ class AppTheme {
     divider: AppColors.divider,
   );
   static const _lightColors = AppColorsExtension(
-    primaryAccent: Color(0xFF284638),
-    secondaryAccent: Color(0xFF9B5035),
-    background: Color(0xFFF6F4ED),
-    surface: Color(0xFFFFFEF9),
+    primaryAccent: Color(0xFFAC3E16),
+    secondaryAccent: Color(0xFFAC3E16),
+    background: Color(0xFFF4F3EE),
+    surface: Color(0xFFFFFFFF),
     success: Color(0xFF3E6543),
     error: Color(0xFFAE342C),
-    primaryText: Color(0xFF202D25),
-    secondaryText: Color(0xFF626B61),
-    divider: Color(0xFFDEDFD4),
+    primaryText: Color(0xFF20241F),
+    secondaryText: Color(0xFF5D655C),
+    divider: Color(0xFFD3D7CF),
   );
   static ThemeData get darkTheme => _buildTheme(Brightness.dark, _darkColors);
   static ThemeData get lightTheme =>
@@ -39,14 +39,18 @@ class AppTheme {
       seedColor: colors.primaryAccent,
       brightness: brightness,
       primary: colors.primaryAccent,
-      onPrimary: colors.background,
+      onPrimary: brightness == Brightness.dark
+          ? const Color(0xFF25170F)
+          : Colors.white,
       secondary: colors.secondaryAccent,
       surface: colors.surface,
       onSurface: colors.primaryText,
+      onSurfaceVariant: colors.secondaryText,
+      outline: colors.divider,
       error: colors.error,
     );
     final shape = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(12),
     );
     return ThemeData(
       useMaterial3: true,
@@ -101,6 +105,13 @@ class AppTheme {
         elevation: 0,
         indicatorColor: colors.primaryAccent.withValues(alpha: .12),
         labelTextStyle: WidgetStatePropertyAll(text.labelLarge),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? colors.primaryAccent
+                : colors.secondaryText,
+          ),
+        ),
       ),
       cardTheme: CardThemeData(
         color: colors.surface,

@@ -1,5 +1,25 @@
 # Spottr design guide
 
+## App-wide athletic identity — 19 October 2026
+
+The user clarified that the fitness identity must apply across screens and authorized direct
+Flutter implementation. This supersedes the older green baseline and workout-only cobalt scope
+below. Use one charcoal/chalk/burnt-orange system across Today, Plans, Progress, onboarding,
+settings, editors and Active Workout. Bundled Outfit uses stronger display and heading weights;
+body text remains quiet and readable. No new fonts, dependencies or image assets are required.
+
+Today uses a dark training panel in both themes, with a fitness mark, orange upper edge and
+primary start/resume action. Plans repeat the upper-edge treatment for the active routine.
+Plans and embedded Progress share compact icon headings; the app navigation uses a training
+symbol for Today. These are visual changes only: labels, navigation and workout rules remain.
+The curved workout logging dock and optional final-set-only behavior are preserved. WorkoutTheme
+now adjusts density while inheriting the shared palette, rather than introducing a separate brand.
+
+Keep imagery secondary to the user's actual routine. Do not invent muscle targets or exercise
+illustrations for custom movements. Existing restrained state transitions and reduced-motion
+behavior are retained. Device and accessibility review is still required before release.
+
+
 ## Active Workout refinement — 19 October 2026
 
 The user accepted the visual direction, especially the curved top of the bottom logging panel,

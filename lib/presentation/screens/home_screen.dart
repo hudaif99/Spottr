@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors_extension.dart';
+import '../../core/theme/app_theme.dart';
 import '../../domain/models/plan.dart';
 import '../../domain/models/workout_day.dart';
 import '../../domain/models/workout_log.dart';
@@ -54,10 +55,11 @@ class _HomeScreenState extends State<HomeScreen> {
         return Scaffold(
           appBar: AppBar(
             title: Text(
-              'spottr',
-              style: Theme.of(
-                context,
-              ).textTheme.headlineMedium?.copyWith(letterSpacing: -1),
+              'SPOTTR',
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                letterSpacing: -1.2,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             actions: [
               IconButton(
@@ -84,13 +86,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           setState(() => _tab = value),
                       destinations: const [
                         NavigationRailDestination(
-                          icon: Icon(Icons.today_outlined),
-                          selectedIcon: Icon(Icons.today_rounded),
+                          icon: Icon(Icons.fitness_center_outlined),
+                          selectedIcon: Icon(Icons.fitness_center_rounded),
                           label: Text('Today'),
                         ),
                         NavigationRailDestination(
-                          icon: Icon(Icons.view_agenda_outlined),
-                          selectedIcon: Icon(Icons.view_agenda_rounded),
+                          icon: Icon(Icons.view_week_outlined),
+                          selectedIcon: Icon(Icons.view_week_rounded),
                           label: Text('Plans'),
                         ),
                         NavigationRailDestination(
@@ -113,13 +115,13 @@ class _HomeScreenState extends State<HomeScreen> {
                       setState(() => _tab = value),
                   destinations: const [
                     NavigationDestination(
-                      icon: Icon(Icons.today_outlined),
-                      selectedIcon: Icon(Icons.today_rounded),
+                      icon: Icon(Icons.fitness_center_outlined),
+                      selectedIcon: Icon(Icons.fitness_center_rounded),
                       label: 'Today',
                     ),
                     NavigationDestination(
-                      icon: Icon(Icons.view_agenda_outlined),
-                      selectedIcon: Icon(Icons.view_agenda_rounded),
+                      icon: Icon(Icons.view_week_outlined),
+                      selectedIcon: Icon(Icons.view_week_rounded),
                       label: 'Plans',
                     ),
                     NavigationDestination(
@@ -414,38 +416,57 @@ class _TodayState extends State<_Today> with WidgetsBindingObserver {
     required String action,
     required VoidCallback onPressed,
     Widget? extra,
-  }) => Container(
-    padding: const EdgeInsets.all(24),
-    decoration: BoxDecoration(
-      color: context.colors.surface,
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: context.colors.divider),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          eyebrow,
-          style: Theme.of(context).textTheme.labelMedium?.copyWith(
-            color: context.colors.secondaryAccent,
-            letterSpacing: 1,
+  }) => Theme(
+    data: AppTheme.darkTheme,
+    child: Builder(
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: context.colors.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border(
+            top: BorderSide(color: context.colors.primaryAccent, width: 3),
           ),
         ),
-        const SizedBox(height: 16),
-        Text(name, style: Theme.of(context).textTheme.headlineLarge),
-        const SizedBox(height: 12),
-        Text(description, style: Theme.of(context).textTheme.bodyMedium),
-        const SizedBox(height: 24),
-        SpottrButton(
-          text: action,
-          icon: const Icon(Icons.arrow_forward_rounded),
-          onPressed: onPressed,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.fitness_center_rounded,
+                  color: context.colors.primaryAccent,
+                  size: 28,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    eyebrow.toUpperCase(),
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: context.colors.secondaryAccent,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(name, style: Theme.of(context).textTheme.headlineLarge),
+            const SizedBox(height: 12),
+            Text(description, style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 24),
+            SpottrButton(
+              text: action,
+              icon: const Icon(Icons.arrow_forward_rounded),
+              onPressed: onPressed,
+            ),
+            if (extra != null) ...[
+              const SizedBox(height: 8),
+              Align(alignment: Alignment.center, child: extra),
+            ],
+          ],
         ),
-        if (extra != null) ...[
-          const SizedBox(height: 8),
-          Align(alignment: Alignment.center, child: extra),
-        ],
-      ],
+      ),
     ),
   );
   Widget _weekDay(DateTime date, bool trained, DateTime now) {
