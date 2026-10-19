@@ -1,5 +1,32 @@
 # Spottr redesign roadmap
 
+## Consistent light-theme lime — 19 October 2026
+
+- Removed the deep-green light-theme fallback after user review. Both themes now share lime
+  accents; light-theme action text is charcoal. Navigation, selected segments, calendar days,
+  heading badges and onboarding icons pair lime fills with charcoal symbols and labels.
+- Input focus and selection retain readable charcoal boundaries on light surfaces. Material
+  primary/secondary/tertiary container colors now follow the shared lime palette too.
+- Twenty-one existing widget checks passed across Today, Plans, Progress, workout, settings,
+  onboarding and profile layouts. Scoped analysis passed; rendered review and a targeted profile
+  retest confirmed readable focused labels. Native-device visual checks remain unverified.
+
+## Electric-lime accent — 19 October 2026
+
+- User approved electric lime `#C4F442` as the primary accent. Filled actions use charcoal text
+  in both themes; light-surface accents use deep green `#466300` for readability.
+- Workout inherits shared button colors; neutral surfaces, layout and behavior are preserved.
+- Fifteen existing UI checks and scoped analysis passed. Reviewed rendered Today and workout
+  screens in light/dark themes. Checked accent text/button contrast pairs at 6.21:1 or higher.
+  Physical-device visual verification remains outstanding.
+
+## Main-tab exit confirmation — 19 October 2026
+
+- Device back on Today, Plans and Progress now requires a second press within two seconds.
+  The first press shows a snackbar; waiting resets the confirmation. Child routes pop normally.
+- Five focused widget checks passed, including all three tabs, timeout expiry, child-route back
+  navigation and starting a workout. Scoped analysis passed. Physical device back remains unverified.
+
 ## App-wide visual consistency — 19 October 2026
 
 - Scope expanded by the user from Active Workout to the overall app appearance.

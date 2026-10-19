@@ -68,4 +68,8 @@ class AppColorsExtension extends ThemeExtension<AppColorsExtension> {
 extension AppColorsExtensionHelper on BuildContext {
   AppColorsExtension get colors =>
       Theme.of(this).extension<AppColorsExtension>()!;
+
+  Color get accentForeground => Theme.of(this).brightness == Brightness.light
+      ? colors.primaryText
+      : colors.primaryAccent;
 }

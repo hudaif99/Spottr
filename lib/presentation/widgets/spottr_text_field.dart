@@ -67,10 +67,7 @@ class SpottrTextField extends StatelessWidget {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide(
-                color: context.colors.primaryAccent,
-                width: 2,
-              ),
+              borderSide: BorderSide(color: context.accentForeground, width: 2),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),

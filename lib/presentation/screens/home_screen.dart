@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_colors_extension.dart';
@@ -34,105 +36,138 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _tab = 0;
+  Timer? _exitConfirmation;
+
+  void _handleBack(bool didPop, Object? result) {
+    if (didPop) return;
+    final messenger = ScaffoldMessenger.of(context);
+    if (_exitConfirmation?.isActive ?? false) {
+      _exitConfirmation!.cancel();
+      messenger.hideCurrentSnackBar();
+      SystemNavigator.pop();
+      return;
+    }
+    const duration = Duration(seconds: 2);
+    _exitConfirmation = Timer(duration, () {});
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text('Press back again to exit'),
+          duration: duration,
+        ),
+      );
+  }
+
   @override
-  Widget build(BuildContext context) => BlocListener<WorkoutBloc, WorkoutState>(
-    listener: (context, state) {
-      if (state is WorkoutInitial) {
-        context.read<HistoryBloc>().add(LoadHistory());
-      }
-    },
-    child: LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 900;
-        final content = IndexedStack(
-          index: _tab,
-          children: [
-            _Today(now: widget.now),
-            const PlanManagementScreen(embedded: true),
-            const HistoryScreen(embedded: true),
-          ],
-        );
-        return Scaffold(
-          appBar: AppBar(
-            title: Text(
-              'SPOTTR',
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                letterSpacing: -1.2,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            actions: [
-              IconButton(
-                tooltip: 'Settings',
-                icon: const Icon(Icons.tune_rounded),
-                onPressed: () {
-                  FocusManager.instance.primaryFocus?.unfocus();
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                  );
-                },
-              ),
-              const SizedBox(width: 12),
-            ],
-          ),
-          body: wide
-              ? Row(
-                  children: [
-                    NavigationRail(
-                      selectedIndex: _tab,
-                      labelType: NavigationRailLabelType.all,
-                      onDestinationSelected: (value) =>
-                          setState(() => _tab = value),
-                      destinations: const [
-                        NavigationRailDestination(
-                          icon: Icon(Icons.fitness_center_outlined),
-                          selectedIcon: Icon(Icons.fitness_center_rounded),
-                          label: Text('Today'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.view_week_outlined),
-                          selectedIcon: Icon(Icons.view_week_rounded),
-                          label: Text('Plans'),
-                        ),
-                        NavigationRailDestination(
-                          icon: Icon(Icons.bar_chart_outlined),
-                          selectedIcon: Icon(Icons.bar_chart_rounded),
-                          label: Text('Progress'),
-                        ),
-                      ],
-                    ),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: content),
-                  ],
-                )
-              : content,
-          bottomNavigationBar: wide
-              ? null
-              : NavigationBar(
-                  selectedIndex: _tab,
-                  onDestinationSelected: (value) =>
-                      setState(() => _tab = value),
-                  destinations: const [
-                    NavigationDestination(
-                      icon: Icon(Icons.fitness_center_outlined),
-                      selectedIcon: Icon(Icons.fitness_center_rounded),
-                      label: 'Today',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.view_week_outlined),
-                      selectedIcon: Icon(Icons.view_week_rounded),
-                      label: 'Plans',
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.bar_chart_outlined),
-                      selectedIcon: Icon(Icons.bar_chart_rounded),
-                      label: 'Progress',
-                    ),
-                  ],
-                ),
-        );
+  void dispose() {
+    _exitConfirmation?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => PopScope(
+    canPop: false,
+    onPopInvokedWithResult: _handleBack,
+    child: BlocListener<WorkoutBloc, WorkoutState>(
+      listener: (context, state) {
+        if (state is WorkoutInitial) {
+          context.read<HistoryBloc>().add(LoadHistory());
+        }
       },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final wide = constraints.maxWidth >= 900;
+          final content = IndexedStack(
+            index: _tab,
+            children: [
+              _Today(now: widget.now),
+              const PlanManagementScreen(embedded: true),
+              const HistoryScreen(embedded: true),
+            ],
+          );
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(
+                'SPOTTR',
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                  letterSpacing: -1.2,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              actions: [
+                IconButton(
+                  tooltip: 'Settings',
+                  icon: const Icon(Icons.tune_rounded),
+                  onPressed: () {
+                    FocusManager.instance.primaryFocus?.unfocus();
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(width: 12),
+              ],
+            ),
+            body: wide
+                ? Row(
+                    children: [
+                      NavigationRail(
+                        selectedIndex: _tab,
+                        labelType: NavigationRailLabelType.all,
+                        onDestinationSelected: (value) =>
+                            setState(() => _tab = value),
+                        destinations: const [
+                          NavigationRailDestination(
+                            icon: Icon(Icons.fitness_center_outlined),
+                            selectedIcon: Icon(Icons.fitness_center_rounded),
+                            label: Text('Today'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.view_week_outlined),
+                            selectedIcon: Icon(Icons.view_week_rounded),
+                            label: Text('Plans'),
+                          ),
+                          NavigationRailDestination(
+                            icon: Icon(Icons.bar_chart_outlined),
+                            selectedIcon: Icon(Icons.bar_chart_rounded),
+                            label: Text('Progress'),
+                          ),
+                        ],
+                      ),
+                      const VerticalDivider(width: 1),
+                      Expanded(child: content),
+                    ],
+                  )
+                : content,
+            bottomNavigationBar: wide
+                ? null
+                : NavigationBar(
+                    selectedIndex: _tab,
+                    onDestinationSelected: (value) =>
+                        setState(() => _tab = value),
+                    destinations: const [
+                      NavigationDestination(
+                        icon: Icon(Icons.fitness_center_outlined),
+                        selectedIcon: Icon(Icons.fitness_center_rounded),
+                        label: 'Today',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.view_week_outlined),
+                        selectedIcon: Icon(Icons.view_week_rounded),
+                        label: 'Plans',
+                      ),
+                      NavigationDestination(
+                        icon: Icon(Icons.bar_chart_outlined),
+                        selectedIcon: Icon(Icons.bar_chart_rounded),
+                        label: 'Progress',
+                      ),
+                    ],
+                  ),
+          );
+        },
+      ),
     ),
   );
 }
@@ -496,6 +531,8 @@ class _TodayState extends State<_Today> with WidgetsBindingObserver {
                   shape: BoxShape.circle,
                   color: trained
                       ? context.colors.primaryAccent
+                      : today
+                      ? context.colors.primaryAccent
                       : Colors.transparent,
                   border: Border.all(
                     color: today
@@ -508,13 +545,18 @@ class _TodayState extends State<_Today> with WidgetsBindingObserver {
                       ? Icon(
                           Icons.check_rounded,
                           size: 16,
-                          color: context.colors.background,
+                          color: Theme.of(context).colorScheme.onPrimary,
                         )
                       : FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
                             '${date.day}',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: today
+                                      ? Theme.of(context).colorScheme.onPrimary
+                                      : null,
+                                ),
                           ),
                         ),
                 ),

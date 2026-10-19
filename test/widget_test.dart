@@ -996,6 +996,85 @@ void main() {
     await unmount(tester);
   });
 
+  for (final tab in ['Today', 'Plans', 'Progress']) {
+    testWidgets('$tab requires a second device back press to exit', (
+      tester,
+    ) async {
+      final exitCalls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'SystemNavigator.pop') exitCalls.add(call);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await mount(tester, const HomeScreen(), platform: TargetPlatform.android);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(NavigationBar),
+          matching: find.text(tab),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Press back again to exit'), findsOneWidget);
+      expect(exitCalls, isEmpty);
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(exitCalls, hasLength(1));
+      await unmount(tester);
+    });
+  }
+
+  testWidgets(
+    'exit confirmation expires and child routes still navigate back',
+    (tester) async {
+      final exitCalls = <MethodCall>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (call) async {
+          if (call.method == 'SystemNavigator.pop') exitCalls.add(call);
+          return null;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          SystemChannels.platform,
+          null,
+        ),
+      );
+      await mount(tester, const HomeScreen(), platform: TargetPlatform.android);
+      Navigator.of(tester.element(find.byType(HomeScreen))).push<void>(
+        MaterialPageRoute(
+          builder: (_) => const Scaffold(body: Text('Details')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.text('Details'), findsNothing);
+      expect(find.text('Press back again to exit'), findsNothing);
+      expect(exitCalls, isEmpty);
+      await tester.binding.handlePopRoute();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(find.text('Press back again to exit'), findsOneWidget);
+      expect(exitCalls, isEmpty);
+      await tester.binding.handlePopRoute();
+      await tester.pump();
+      expect(exitCalls, hasLength(1));
+      await unmount(tester);
+    },
+  );
+
   testWidgets('Today starts the suggested workout with one tap', (
     tester,
   ) async {

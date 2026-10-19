@@ -4,11 +4,18 @@
 
 The user clarified that the fitness identity must apply across screens and authorized direct
 Flutter implementation. This supersedes the older green baseline and workout-only cobalt scope
-below. Use one charcoal/chalk/burnt-orange system across Today, Plans, Progress, onboarding,
+below. Use one charcoal/chalk/electric-lime system across Today, Plans, Progress, onboarding,
 settings, editors and Active Workout. Bundled Outfit uses stronger display and heading weights;
 body text remains quiet and readable. No new fonts, dependencies or image assets are required.
 
-Today uses a dark training panel in both themes, with a fitness mark, orange upper edge and
+Primary filled actions use electric lime `#C4F442` with charcoal `#20241F` text in both themes.
+Use the same lime accent in both themes. In light mode, action text and unfilled icons use
+charcoal; selected controls and navigation use lime fills with charcoal foregrounds. Never use
+the earlier deep-green fallback or lime text on light surfaces. Headings and onboarding icon
+badges use lime backgrounds with charcoal symbols. Keep errors independently readable, and
+communicate light-theme completion with explicit labels and checkmarks rather than a separate green accent.
+
+Today uses a dark training panel in both themes, with a fitness mark, lime upper edge and
 primary start/resume action. Plans repeat the upper-edge treatment for the active routine.
 Plans and embedded Progress share compact icon headings; the app navigation uses a training
 symbol for Today. These are visual changes only: labels, navigation and workout rules remain.

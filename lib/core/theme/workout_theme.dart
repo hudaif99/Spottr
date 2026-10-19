@@ -26,14 +26,10 @@ abstract final class WorkoutTheme {
         iconTheme: IconThemeData(color: colors.primaryText),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: scheme.primary,
-          foregroundColor: scheme.onPrimary,
-          minimumSize: const Size(0, 56),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        style: base.filledButtonTheme.style!.copyWith(
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           ),
-          textStyle: text.titleMedium,
         ),
       ),
       bottomSheetTheme: base.bottomSheetTheme.copyWith(

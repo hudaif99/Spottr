@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../core/theme/app_colors_extension.dart';
 
 class TrainingHeading extends StatelessWidget {
   final String title;
@@ -13,10 +12,14 @@ class TrainingHeading extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: context.colors.primaryAccent.withValues(alpha: .1),
+          color: Theme.of(context).colorScheme.primaryContainer,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(icon, color: context.colors.primaryAccent, size: 24),
+        child: Icon(
+          icon,
+          color: Theme.of(context).colorScheme.onPrimaryContainer,
+          size: 24,
+        ),
       ),
       const SizedBox(width: 14),
       Expanded(

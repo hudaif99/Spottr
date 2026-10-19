@@ -16,6 +16,8 @@ The main action should be obvious, useful context visible, and repeated typing r
 - Clear storage boundaries so a backend can be integrated later. No backend integration in this redesign.
 - Android and iOS support with responsive small-phone and iPad layouts.
 - Purposeful animations, clean code, few dependencies, and focused tests.
+- Device back on Today, Plans or Progress shows "Press back again to exit".
+  A second press within two seconds exits; other routes retain normal back navigation.
 - Preserve the current app in Git and protect existing user data during migration.
 - Reminders use a user-approved 14-day dated window, refreshed when the app opens/resumes.
   They expire if the app stays unopened past that window. Completed workouts suppress that

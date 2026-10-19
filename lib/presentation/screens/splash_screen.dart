@@ -89,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
                 Text(
                   'Spottr',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: context.colors.primaryAccent,
+                    color: context.accentForeground,
                     fontWeight: FontWeight.bold,
                     letterSpacing: 3,
                   ),

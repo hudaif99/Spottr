@@ -16,11 +16,11 @@ class AppTheme {
     divider: AppColors.divider,
   );
   static const _lightColors = AppColorsExtension(
-    primaryAccent: Color(0xFFAC3E16),
-    secondaryAccent: Color(0xFFAC3E16),
+    primaryAccent: AppColors.primaryAccent,
+    secondaryAccent: AppColors.secondaryAccent,
     background: Color(0xFFF4F3EE),
     surface: Color(0xFFFFFFFF),
-    success: Color(0xFF3E6543),
+    success: Color(0xFF20241F),
     error: Color(0xFFAE342C),
     primaryText: Color(0xFF20241F),
     secondaryText: Color(0xFF5D655C),
@@ -39,16 +39,26 @@ class AppTheme {
       seedColor: colors.primaryAccent,
       brightness: brightness,
       primary: colors.primaryAccent,
-      onPrimary: brightness == Brightness.dark
-          ? const Color(0xFF25170F)
-          : Colors.white,
+      onPrimary: AppColors.onPrimaryAccent,
+      primaryContainer: colors.primaryAccent,
+      onPrimaryContainer: AppColors.onPrimaryAccent,
       secondary: colors.secondaryAccent,
+      onSecondary: AppColors.onPrimaryAccent,
+      secondaryContainer: colors.secondaryAccent,
+      onSecondaryContainer: AppColors.onPrimaryAccent,
+      tertiary: colors.primaryAccent,
+      onTertiary: AppColors.onPrimaryAccent,
+      tertiaryContainer: colors.primaryAccent,
+      onTertiaryContainer: AppColors.onPrimaryAccent,
       surface: colors.surface,
       onSurface: colors.primaryText,
       onSurfaceVariant: colors.secondaryText,
       outline: colors.divider,
       error: colors.error,
     );
+    final accentForeground = brightness == Brightness.light
+        ? colors.primaryText
+        : colors.primaryAccent;
     final shape = RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
     );
@@ -69,6 +79,8 @@ class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primaryAccent,
+          foregroundColor: AppColors.onPrimaryAccent,
           minimumSize: const Size(0, 56),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16),
           shape: shape,
@@ -85,7 +97,10 @@ class AppTheme {
         ),
       ),
       textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(minimumSize: const Size(48, 48)),
+        style: TextButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          foregroundColor: accentForeground,
+        ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
@@ -93,25 +108,51 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: colors.surface,
+        floatingLabelStyle: WidgetStateTextStyle.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.error)
+                ? colors.error
+                : accentForeground,
+          ),
+        ),
         contentPadding: const EdgeInsets.all(16),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(color: colors.divider),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: accentForeground, width: 2),
+        ),
+      ),
+      textSelectionTheme: TextSelectionThemeData(
+        cursorColor: accentForeground,
+        selectionColor: colors.primaryAccent.withValues(alpha: .35),
+        selectionHandleColor: accentForeground,
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: colors.background,
         elevation: 0,
-        indicatorColor: colors.primaryAccent.withValues(alpha: .12),
+        indicatorColor: colors.primaryAccent,
         labelTextStyle: WidgetStatePropertyAll(text.labelLarge),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? colors.primaryAccent
+                ? AppColors.onPrimaryAccent
                 : colors.secondaryText,
           ),
         ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: colors.background,
+        indicatorColor: colors.primaryAccent,
+        selectedIconTheme: const IconThemeData(
+          color: AppColors.onPrimaryAccent,
+        ),
+        unselectedIconTheme: IconThemeData(color: colors.secondaryText),
+        selectedLabelTextStyle: text.labelLarge,
+        unselectedLabelTextStyle: text.labelLarge,
       ),
       cardTheme: CardThemeData(
         color: colors.surface,

@@ -65,7 +65,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         style: SegmentedButton.styleFrom(
                           minimumSize: const Size(0, 48),
                           selectedBackgroundColor: context.colors.primaryAccent,
-                          selectedForegroundColor: context.colors.background,
+                          selectedForegroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary,
                           foregroundColor: context.colors.primaryText,
                           side: BorderSide(color: context.colors.divider),
                         ),
