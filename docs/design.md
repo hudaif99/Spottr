@@ -15,6 +15,9 @@ the earlier deep-green fallback or lime text on light surfaces. Headings and onb
 badges use lime backgrounds with charcoal symbols. Keep errors independently readable, and
 communicate light-theme completion with explicit labels and checkmarks rather than a separate green accent.
 
+Training-day chips reserve their checkmark slot in both states. Selection must never change chip
+width or move neighboring days, so quick taps remain reliable. Keep the native selected checkmark.
+
 Today uses a dark training panel in both themes, with a fitness mark, lime upper edge and
 primary start/resume action. Plans repeat the upper-edge treatment for the active routine.
 Plans and embedded Progress share compact icon headings; the app navigation uses a training

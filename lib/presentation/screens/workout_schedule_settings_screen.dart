@@ -294,6 +294,9 @@ class _TrainingDaysSheetState extends State<_TrainingDaysSheet> {
           children: [
             for (var day = 1; day <= 7; day++)
               FilterChip(
+                // Reserve the checkmark slot even before a day is selected.
+                avatar: const SizedBox.shrink(),
+                showCheckmark: true,
                 label: Text(_WorkoutScheduleSettingsScreenState._days[day - 1]),
                 selected: _selected.contains(day),
                 onSelected: (selected) => setState(() {

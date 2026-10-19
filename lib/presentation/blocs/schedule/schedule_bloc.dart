@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/models/workout_schedule.dart';
 import '../../../data/repositories/notification_repository.dart';
@@ -114,7 +115,10 @@ class ScheduleBloc extends Bloc<ScheduleEvent, ScheduleState> {
       persisted = true;
       await _scheduler.rescheduleAll(schedule);
       emit(ScheduleLoaded(schedule));
-    } catch (_) {
+    } catch (error, stack) {
+      debugPrint(
+        'Schedule ${persisted ? 'reminder update' : 'save'} failed: $error\n$stack',
+      );
       emit(
         ScheduleError(
           persisted

@@ -255,6 +255,9 @@ class _OnboardingFlowScreenState extends State<OnboardingFlowScreen> {
                             children: [
                               for (var i = 0; i < 7; i++)
                                 FilterChip(
+                                  // Keep the checkmark slot open so nearby days never move.
+                                  avatar: const SizedBox.shrink(),
+                                  showCheckmark: true,
                                   label: Text(_dayLabels[i]),
                                   selected: _days.contains(i + 1),
                                   onSelected: (selected) => setState(() {

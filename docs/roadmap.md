@@ -1,5 +1,21 @@
 # Spottr redesign roadmap
 
+## Onboarding save investigation and stable day selection — 19 October 2026
+
+- Reserved the native FilterChip checkmark slot in onboarding and the schedule day sheet.
+  Selecting a day keeps every chip's width and wrapping fixed, including during check animation.
+- Seventeen focused checks passed, including real Hive/BLoC persistence, restart, onboarding retry
+  paths and chip positions. Nine day-selection/onboarding checks passed again after targeting the
+  full chip hit areas. Scoped analysis and the Android arm64 release build passed.
+- A separate release probe on the connected Android phone saved/reopened schedules and ran the
+  production reminder update path for all three stored permission states successfully. It used its
+  own package/data, was removed afterward, and did not replace Spottr. Notification delivery and
+  the original app's failing save are not verified by this probe.
+- The reported save failure remains unresolved without reproducing it in the existing app's data
+  context. Added release-visible exception/stack diagnostics and prepared an updated normal release
+  at `build/design-review/spottr-onboarding-diagnostic-release.apk`. Reproduce with that update and
+  inspect Flutter logs before choosing a storage fix. Do not bypass persistence to finish onboarding.
+
 ## Consistent light-theme lime — 19 October 2026
 
 - Removed the deep-green light-theme fallback after user review. Both themes now share lime

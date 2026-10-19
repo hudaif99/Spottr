@@ -315,8 +315,8 @@ void main() {
   Future<void> toNotifications(WidgetTester tester) async {
     await tap(tester, inStep('welcome', 'Continue'));
     await tap(tester, inStep('time', 'Continue'));
-    await tap(tester, inStep('days', 'Mon'));
-    await tap(tester, inStep('days', 'Wed'));
+    await tap(tester, find.widgetWithText(FilterChip, 'Mon'));
+    await tap(tester, find.widgetWithText(FilterChip, 'Wed'));
     await tap(tester, inStep('days', 'Continue'));
   }
 
@@ -409,6 +409,50 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  for (final (size, scale) in [
+    (const Size(320, 568), 1.0),
+    (const Size(390, 844), 1.0),
+    (const Size(320, 568), 1.8),
+  ]) {
+    testWidgets(
+      'onboarding day positions stay fixed at $size with scale $scale',
+      (tester) async {
+        await mount(
+          tester,
+          const OnboardingFlowScreen(),
+          size: size,
+          scale: scale,
+        );
+        await tap(tester, inStep('welcome', 'Continue'));
+        await tap(tester, inStep('time', 'Continue'));
+        final chips = find.descendant(
+          of: find.byKey(const ValueKey('days-step')),
+          matching: find.byType(FilterChip),
+        );
+        for (var i = 0; i < 7; i++) {
+          await tester.ensureVisible(chips.at(i));
+          await tester.pumpAndSettle();
+          final before = [
+            for (var j = 0; j < 7; j++) tester.getRect(chips.at(j)),
+          ];
+          await tester.tap(chips.at(i));
+          await tester.pump(const Duration(milliseconds: 80));
+          for (var j = 0; j < 7; j++) {
+            expect(tester.getRect(chips.at(j)), before[j]);
+          }
+          await tester.pumpAndSettle();
+          for (var j = 0; j < 7; j++) {
+            expect(tester.getRect(chips.at(j)), before[j]);
+          }
+          final chip = tester.widget<FilterChip>(chips.at(i));
+          expect(chip.selected, isTrue);
+          expect(chip.showCheckmark, isTrue);
+        }
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   for (final (size, scale, dark, choice) in [
     (const Size(390, 844), 1.0, false, 'skip'),
     (const Size(320, 568), 1.8, true, 'granted'),
@@ -439,8 +483,8 @@ void main() {
         );
         await tap(tester, find.text('Cancel'));
         await tap(tester, inStep('time', 'Continue'));
-        await tap(tester, inStep('days', 'Mon'));
-        await tap(tester, inStep('days', 'Wed'));
+        await tap(tester, find.widgetWithText(FilterChip, 'Mon'));
+        await tap(tester, find.widgetWithText(FilterChip, 'Wed'));
         await capture(tester, 'onboarding-days-$choice');
         await tap(tester, inStep('days', 'Continue'));
         await capture(tester, 'onboarding-notifications-$choice');
@@ -642,7 +686,14 @@ void main() {
         await tester.pumpAndSettle();
         await capture(tester, 'schedule-reminder-note-$suffix');
         await tap(tester, find.text('Training days'));
+        final chips = find.byType(FilterChip);
+        final dayPositions = [
+          for (var i = 0; i < 7; i++) tester.getRect(chips.at(i)),
+        ];
         await tap(tester, find.widgetWithText(FilterChip, 'Tue'));
+        for (var i = 0; i < 7; i++) {
+          expect(tester.getRect(chips.at(i)), dayPositions[i]);
+        }
         await capture(tester, 'schedule-days-$suffix');
         await tap(tester, find.byTooltip('Cancel day changes'));
         expect(schedules.schedule!.workoutDays, [1, 3]);
