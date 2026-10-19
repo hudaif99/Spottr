@@ -1,5 +1,37 @@
 # Spottr redesign roadmap
 
+## Flutter refinement and final-set logging — 19 October 2026
+
+- User accepted the anchor direction and requested no further mockups. Kept the curved logging
+  panel, quietened Finish and added a clearer active-set edge directly in Flutter.
+- Added Final set only selection and a truthful final-set summary with an earlier-set return action.
+  Existing completion flags preserve this result through recovery, with no schema or Hive changes.
+- Thirteen focused widget checks passed: final-only history retains Set 3 and a single set's volume;
+  save failure/retry, resume, earlier-set logging and undo preserve gaps. Existing compact rest,
+  large-text/tablet/dark, recovery, partial-finish and weight-carry checks passed too.
+- Reviewed actual Flutter captures of final-set entry, logged summary and normal logging.
+  Native device/keyboard, screen-reader and iOS checks remain unverified.
+- Remain in the Active Workout slice; other screens and the deferred inline-entry work are unchanged.
+
+## New direction review — 18 October 2026
+
+The user accepted the [prototype flow](design-review/core-workout.html) and authorized creative
+development of the Active Workout visual anchor. The [audit](design-review/audit-and-direction.md)
+records the original review; its no-Flutter-change statement applies to that earlier checkpoint.
+
+- Implemented a scoped chalk/graphite/cobalt light/dark theme, stronger Outfit hierarchy, compact
+  number controls, a bottom logging area and header finish action. Rest and history stay with entry.
+- Added brief selection/progress feedback; retained reduced-motion behavior and existing undo.
+- Preserved BLoC writes, numeric-entry dialogs, recovery, session editing, history and Hive formats.
+- Fifteen focused checks passed, covering compact/large-text/tablet/dark layouts, logging/undo,
+  weight carry-forward, exercise movement, recovery and partial finish. Two new checks verify
+  direct access to Log during rest with previous-performance context at 320 × 568 in both themes.
+- Reviewed rendered Flutter light/dark/compact/tablet states. Main text and button color pairs
+  calculate above 4.5:1. Native keyboard/device/accessibility and iOS checks remain outstanding.
+- Visual approval of the anchor remains open. Inline entry, repeat shortcut and optional progression
+  guidance from the prototype are not part of this visual slice. Extend connected screens only
+  after the anchor review, keeping their behavior and storage contracts intact.
+
 ## Baseline
 
 - Original app: `spottr-classic`, commit `6debc98` (Android build compatibility fixes).

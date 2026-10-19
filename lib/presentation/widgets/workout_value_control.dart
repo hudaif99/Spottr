@@ -12,6 +12,7 @@ class WorkoutValueControl extends StatelessWidget {
   final ValueChanged<num> onChanged;
   final ValueChanged<num>? onStep;
   final bool enabled;
+  final bool compact;
   const WorkoutValueControl({
     super.key,
     required this.label,
@@ -20,6 +21,7 @@ class WorkoutValueControl extends StatelessWidget {
     required this.onChanged,
     this.onStep,
     this.enabled = true,
+    this.compact = false,
   });
 
   Future<void> _edit(BuildContext context) async {
@@ -35,29 +37,42 @@ class WorkoutValueControl extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     children: [
       Text(label, style: Theme.of(context).textTheme.bodyMedium),
-      const SizedBox(height: 8),
+      SizedBox(height: compact ? 0 : 8),
       TextButton(
         onPressed: enabled ? () => _edit(context) : null,
         style: TextButton.styleFrom(
           foregroundColor: context.colors.primaryText,
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          padding: EdgeInsets.symmetric(
+            vertical: compact ? 2 : 12,
+            horizontal: 8,
+          ),
         ),
         child: FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
             formatWeight(value),
             style: Theme.of(context).textTheme.displayLarge?.copyWith(
-              fontSize: 42,
+              fontSize: compact ? 38 : 42,
+              fontWeight: FontWeight.w600,
               fontFeatures: const [FontFeature.tabularFigures()],
             ),
           ),
         ),
       ),
-      const SizedBox(height: 8),
+      SizedBox(height: compact ? 0 : 8),
       Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton.outlined(
+            style: compact
+                ? IconButton.styleFrom(
+                    backgroundColor: context.colors.background,
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  )
+                : null,
             tooltip: 'Decrease $label',
             onPressed: enabled && value > 0
                 ? () => onStep != null
@@ -68,6 +83,15 @@ class WorkoutValueControl extends StatelessWidget {
           ),
           const SizedBox(width: 12),
           IconButton.outlined(
+            style: compact
+                ? IconButton.styleFrom(
+                    backgroundColor: context.colors.background,
+                    side: BorderSide.none,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  )
+                : null,
             tooltip: 'Increase $label',
             onPressed: enabled && value < 2000
                 ? () => onStep != null

@@ -1085,6 +1085,167 @@ void main() {
     },
   );
 
+  for (final dark in [false, true]) {
+    testWidgets('compact logging stays reachable with history and rest $dark', (
+      tester,
+    ) async {
+      final repo = FakeWorkoutRepository()
+        ..active = ActiveWorkout(
+          workoutLogId: 'anchor',
+          planId: plan.id,
+          day: day,
+          startTime: DateTime.now(),
+          exerciseLogs: {
+            for (final e in exercises)
+              e.id: [
+                for (var i = 0; i < 3; i++)
+                  SetLog(id: '${e.id}-$i', reps: 10, weight: 12.5),
+              ],
+          },
+          previousExerciseLogs: {
+            exercises.first.id: [
+              SetLog(id: 'previous', reps: 9, weight: 12.5, isCompleted: true),
+            ],
+          },
+        );
+      final (_, workout) = await mount(
+        tester,
+        const ActiveWorkoutScreen(),
+        size: const Size(320, 568),
+        dark: dark,
+        repository: repo,
+      );
+      workout.add(ResumeWorkout());
+      await tester.pumpAndSettle();
+      expect(find.text('Log set 1').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('Log set 1'));
+      await tester.pumpAndSettle();
+      expect(find.text('Log set 2').hitTestable(), findsOneWidget);
+      expect(find.text('+30s').hitTestable(), findsOneWidget);
+      await capture(tester, 'workout-anchor-rest-${dark ? 'dark' : 'light'}');
+      await tester.tap(find.text('Skip'));
+      await tester.pumpAndSettle();
+      expect((workout.state as WorkoutInProgress).restUntil, isNull);
+      expect(
+        repo.active!.exerciseLogs[exercises.first.id]!.first.isCompleted,
+        isTrue,
+      );
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    });
+  }
+
+  testWidgets(
+    'final-set shortcut saves only the final set and preserves history position',
+    (tester) async {
+      final (repo, _) = await mount(tester, const HomeScreen());
+      await tester.tap(find.text('Start workout'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Final set only'));
+      await tester.pumpAndSettle();
+      expect(find.text('Set 3 of 3'), findsOneWidget);
+      expect(
+        repo.active!.exerciseLogs[exercises.first.id]!.any(
+          (s) => s.isCompleted,
+        ),
+        isFalse,
+      );
+      await tester.tap(find.text('Log set 3'));
+      await tester.pumpAndSettle();
+      expect(find.text('Final set logged'), findsOneWidget);
+      expect(find.text('Exercise complete'), findsNothing);
+      await capture(tester, 'workout-final-set-logged');
+      await tester.tap(find.text('Finish workout'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(
+          '1 completed set will be saved. Unfinished sets stay out of your totals.',
+        ),
+        findsOneWidget,
+      );
+      await tester.tap(find.text('Finish'));
+      await tester.pumpAndSettle();
+      final saved = repo.logs.single;
+      expect(saved.totalVolume, 125);
+      expect(
+        saved.exerciseLogs[exercises.first.id]!.map((s) => s.isCompleted),
+        [false, false, true],
+      );
+      await tester.tap(find.text('Progress'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lower body'));
+      await tester.pumpAndSettle();
+      expect(find.text('Set 3'), findsOneWidget);
+      expect(find.text('Set 1'), findsNothing);
+      expect(find.text('Set 2'), findsNothing);
+      expect(tester.takeException(), isNull);
+      await unmount(tester);
+    },
+  );
+
+  testWidgets('final-set logging retries, resumes and allows earlier sets', (
+    tester,
+  ) async {
+    final (repo, _) = await mount(
+      tester,
+      const ActiveWorkoutScreen(),
+      start: true,
+      size: const Size(320, 568),
+      dark: true,
+    );
+    await tester.tap(find.text('Final set only'));
+    await tester.pumpAndSettle();
+    expect(find.text('Log set 3').hitTestable(), findsOneWidget);
+    await capture(tester, 'workout-final-set-entry-dark');
+    repo.failSave = true;
+    await tester.tap(find.text('Log set 3'));
+    await tester.pumpAndSettle();
+    expect(find.text('Save pending'), findsOneWidget);
+    expect(
+      repo.active!.exerciseLogs[exercises.first.id]!.last.isCompleted,
+      isFalse,
+    );
+    repo.failSave = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pumpAndSettle();
+    expect(
+      repo.active!.exerciseLogs[exercises.first.id]!.map((s) => s.isCompleted),
+      [false, false, true],
+    );
+    await unmount(tester);
+    final (_, restored) = await mount(
+      tester,
+      const ActiveWorkoutScreen(),
+      repository: repo,
+      size: const Size(320, 568),
+      dark: true,
+    );
+    restored.add(ResumeWorkout());
+    await tester.pumpAndSettle();
+    expect(find.text('Final set logged'), findsOneWidget);
+    await tester.ensureVisible(find.text('Log earlier sets'));
+    await tester.tap(find.text('Log earlier sets'));
+    await tester.pumpAndSettle();
+    expect(find.text('Log set 1'), findsOneWidget);
+    await tester.ensureVisible(find.text('Log set 1'));
+    await tester.tap(find.text('Log set 1'));
+    await tester.pumpAndSettle();
+    expect(
+      repo.active!.exerciseLogs[exercises.first.id]!.map((s) => s.isCompleted),
+      [true, false, true],
+    );
+    await tester.ensureVisible(find.byTooltip('Undo set 3'));
+    await tester.tap(find.byTooltip('Undo set 3'));
+    await tester.pumpAndSettle();
+    expect(find.text('Log set 2'), findsOneWidget);
+    expect(
+      repo.active!.exerciseLogs[exercises.first.id]!.map((s) => s.isCompleted),
+      [true, false, false],
+    );
+    expect(tester.takeException(), isNull);
+    await unmount(tester);
+  });
+
   testWidgets('focused workout logs, undoes, and retains the setup cue', (
     tester,
   ) async {

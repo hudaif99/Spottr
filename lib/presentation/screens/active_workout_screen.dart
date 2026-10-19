@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../core/theme/app_colors_extension.dart';
+import '../../core/theme/workout_theme.dart';
 import '../../domain/models/exercise.dart';
 import '../../domain/models/set_log.dart';
+import '../../domain/workout_rules.dart';
 import '../blocs/settings/settings_bloc.dart';
 import '../blocs/workout/workout_bloc.dart';
 import '../blocs/workout/workout_event.dart';
@@ -17,13 +19,22 @@ import '../widgets/spottr_button.dart';
 import '../widgets/previous_set_summary.dart';
 import '../widgets/workout_value_control.dart';
 
-class ActiveWorkoutScreen extends StatefulWidget {
+class ActiveWorkoutScreen extends StatelessWidget {
   const ActiveWorkoutScreen({super.key});
   @override
-  State<ActiveWorkoutScreen> createState() => _ActiveWorkoutScreenState();
+  Widget build(BuildContext context) => Theme(
+    data: WorkoutTheme.from(Theme.of(context)),
+    child: const _ActiveWorkoutBody(),
+  );
 }
 
-class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
+class _ActiveWorkoutBody extends StatefulWidget {
+  const _ActiveWorkoutBody();
+  @override
+  State<_ActiveWorkoutBody> createState() => _ActiveWorkoutScreenState();
+}
+
+class _ActiveWorkoutScreenState extends State<_ActiveWorkoutBody> {
   String? _selectedExerciseId;
   int get _selected {
     final state = context.read<WorkoutBloc>().state;
@@ -231,15 +242,17 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
           appBar: AppBar(
             title: Text(state.day.name),
             actions: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Center(
-                  child: Text(
-                    '${elapsed}m',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontFeatures: const [FontFeature.tabularFigures()],
-                    ),
-                  ),
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: context.colors.secondaryText,
+                ),
+                onPressed: state.isSaving ? null : () => _finish(state),
+                child: Text(
+                  state.historyCheckPending
+                      ? 'Retry recovery'
+                      : state.completionPending
+                      ? 'Retry finishing'
+                      : 'Finish workout',
                 ),
               ),
               PopupMenuButton<String>(
@@ -259,15 +272,90 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 final wide = constraints.maxWidth >= 840;
-                final focus = exercises.isEmpty
-                    ? _emptyExercise()
-                    : AbsorbPointer(
-                        absorbing: state.isReadOnly,
-                        child: _focus(
-                          state,
-                          exercises[_selected.clamp(0, exercises.length - 1)],
+                final exercise = exercises.isEmpty
+                    ? null
+                    : exercises[_selected.clamp(0, exercises.length - 1)];
+                final summary = SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+                  child: exercise == null
+                      ? _emptyExercise()
+                      : _focus(state, exercise),
+                );
+                final dock = exercise == null
+                    ? const SizedBox.shrink()
+                    : Container(
+                        decoration: BoxDecoration(
+                          color: context.colors.surface,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(28),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: context.colors.primaryText.withValues(
+                                alpha: .04,
+                              ),
+                              blurRadius: 24,
+                              offset: const Offset(0, -8),
+                            ),
+                          ],
+                        ),
+                        child: ConstrainedBox(
+                          // Large text and short landscape keep every action scrollable.
+                          constraints: BoxConstraints(
+                            maxHeight:
+                                constraints.maxHeight *
+                                (state.errorMessage != null ||
+                                        MediaQuery.textScalerOf(
+                                              context,
+                                            ).scale(1) >
+                                            1.3
+                                    ? .43
+                                    : .67),
+                          ),
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                            child: AbsorbPointer(
+                              absorbing: state.isReadOnly,
+                              child: _focus(state, exercise, controls: true),
+                            ),
+                          ),
                         ),
                       );
+                final focused = Column(
+                  children: [
+                    if (!wide)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextButton.icon(
+                                onPressed: () => _showOverview(state),
+                                style: TextButton.styleFrom(
+                                  alignment: Alignment.centerLeft,
+                                  foregroundColor: context.colors.secondaryText,
+                                  padding: EdgeInsets.zero,
+                                ),
+                                icon: const Icon(
+                                  Icons.format_list_bulleted_rounded,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  'Exercise ${exercises.isEmpty ? 0 : _selected + 1} of ${exercises.length} · overview',
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${elapsed}m',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
+                        ),
+                      ),
+                    Expanded(child: summary),
+                    dock,
+                  ],
+                );
                 return Column(
                   children: [
                     if (state.errorMessage != null)
@@ -285,18 +373,17 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                         ],
                       ),
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 4, 24, 12),
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 8),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Wrap(
                             alignment: WrapAlignment.spaceBetween,
-                            spacing: 16,
-                            runSpacing: 8,
+                            spacing: 12,
                             children: [
                               Text(
                                 '$completed of $total sets logged',
-                                style: Theme.of(context).textTheme.bodyMedium,
+                                style: Theme.of(context).textTheme.bodySmall,
                               ),
                               Text(
                                 state.historyCheckPending
@@ -310,12 +397,24 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          LinearProgressIndicator(
-                            value: total == 0 ? 0 : completed / total,
-                            minHeight: 3,
-                            borderRadius: BorderRadius.circular(4),
-                            backgroundColor: context.colors.divider,
+                          const SizedBox(height: 10),
+                          TweenAnimationBuilder<double>(
+                            tween: Tween(
+                              end: total == 0 ? 0 : completed / total,
+                            ),
+                            duration: MediaQuery.disableAnimationsOf(context)
+                                ? Duration.zero
+                                : const Duration(milliseconds: 220),
+                            curve: Curves.easeOutCubic,
+                            builder: (context, value, _) =>
+                                LinearProgressIndicator(
+                                  value: value,
+                                  minHeight: 3,
+                                  borderRadius: BorderRadius.circular(4),
+                                  color: context.colors.primaryAccent,
+                                  backgroundColor: context.colors.divider
+                                      .withValues(alpha: .5),
+                                ),
                           ),
                         ],
                       ),
@@ -326,7 +425,6 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                           constraints: const BoxConstraints(maxWidth: 1180),
                           child: wide
                               ? Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     SizedBox(
                                       width: 300,
@@ -334,66 +432,18 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
                                     ),
                                     const VerticalDivider(width: 1),
                                     Expanded(
-                                      child: SingleChildScrollView(
-                                        padding: const EdgeInsets.all(32),
-                                        child: Center(
-                                          child: ConstrainedBox(
-                                            constraints: const BoxConstraints(
-                                              maxWidth: 700,
-                                            ),
-                                            child: focus,
+                                      child: Center(
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(
+                                            maxWidth: 700,
                                           ),
+                                          child: focused,
                                         ),
                                       ),
                                     ),
                                   ],
                                 )
-                              : SingleChildScrollView(
-                                  padding: const EdgeInsets.fromLTRB(
-                                    24,
-                                    0,
-                                    24,
-                                    24,
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: TextButton.icon(
-                                          onPressed: () => _showOverview(state),
-                                          icon: const Icon(
-                                            Icons.format_list_bulleted_rounded,
-                                            size: 20,
-                                          ),
-                                          label: Text(
-                                            'Exercise ${exercises.isEmpty ? 0 : _selected.clamp(0, exercises.length - 1) + 1} of ${exercises.length} · overview',
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      focus,
-                                    ],
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 8, 24, 12),
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 700),
-                          child: SpottrButton(
-                            text: state.historyCheckPending
-                                ? 'Retry recovery'
-                                : state.completionPending
-                                ? 'Retry finishing'
-                                : 'Finish workout',
-                            variant: SpottrButtonVariant.outline,
-                            onPressed: state.isSaving
-                                ? null
-                                : () => _finish(state),
-                          ),
+                              : focused,
                         ),
                       ),
                     ),
@@ -421,9 +471,16 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     ],
   );
 
-  Widget _focus(WorkoutInProgress state, Exercise exercise) {
+  Widget _focus(
+    WorkoutInProgress state,
+    Exercise exercise, {
+    bool controls = false,
+  }) {
     final sets = state.exerciseLogs[exercise.id] ?? [];
-    final next = sets.where((set) => !set.isCompleted).firstOrNull;
+    final finalSetLogged = hasLoggedFinalSetWithGaps(sets);
+    final next = finalSetLogged
+        ? null
+        : sets.where((set) => !set.isCompleted).firstOrNull;
     final selected =
         sets.where((set) => set.id == _editingSet).firstOrNull ?? next;
     final previous = state.previousExerciseLogs[exercise.id] ?? [];
@@ -441,343 +498,441 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: Text(exercise.name, style: text.headlineLarge)),
-            IconButton(
-              tooltip: 'Edit exercise for this session',
-              onPressed: state.isSaving || state.isReadOnly
-                  ? null
-                  : () => _editExercise(
-                      exercise,
-                      sets.any((set) => set.isCompleted),
-                    ),
-              icon: const Icon(Icons.tune_rounded, size: 22),
-            ),
-          ],
-        ),
-        if (exercise.note.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(exercise.note, style: text.bodyMedium),
-          ),
-        const SizedBox(height: 8),
-        if (previous.any((set) => set.isCompleted))
-          PreviousSetSummary(
-            sets: previous,
-            setIndex: selected == null
-                ? sets.length - 1
-                : sets.indexOf(selected),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Text(
-              '${exercise.targetSets} sets · ${exercise.targetReps} reps · ${exercise.restDurationSeconds}s rest',
-              style: text.bodyMedium,
-            ),
-          ),
-        const SizedBox(height: 12),
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: context.colors.surface,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: context.colors.divider),
-          ),
-          child: selected == null
-              ? Column(
-                  children: [
-                    Icon(
-                      Icons.check_rounded,
-                      color: context.colors.success,
-                      size: 32,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      sets.isEmpty ? 'No sets yet' : 'Exercise complete',
-                      style: text.titleLarge,
-                    ),
-                    const SizedBox(height: 20),
-                    SpottrButton(
-                      text: sets.isEmpty
-                          ? 'Add a set'
-                          : _selected < state.day.exercises.length - 1
-                          ? 'Next exercise'
-                          : 'View workout',
-                      onPressed: () {
-                        if (sets.isEmpty) {
-                          context.read<WorkoutBloc>().add(AddSet(exercise.id));
-                          return;
-                        }
-                        if (_selected < state.day.exercises.length - 1) {
-                          _select(_selected + 1);
-                        } else {
-                          _showOverview(state);
-                        }
-                      },
-                    ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    Wrap(
-                      alignment: WrapAlignment.spaceBetween,
-                      spacing: 12,
-                      runSpacing: 8,
-                      children: [
-                        Text(
-                          '${selected.isCompleted ? 'Editing set' : 'Set'} ${sets.indexOf(selected) + 1} of ${sets.length}',
-                          style: text.titleMedium,
-                        ),
-                        if (selected.isWarmup || selected.isDropSet)
-                          Text(
-                            selected.isWarmup ? 'Warm-up' : 'Drop set',
-                            style: text.labelMedium,
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: WorkoutValueControl(
-                            label: 'Weight · kg',
-                            value: selected.weight,
-                            step: 2.5,
-                            enabled: !state.isSaving && !state.isReadOnly,
-                            onChanged: (value) => update(
-                              selected.copyWith(weight: value.toDouble()),
-                            ),
-                            onStep: (delta) => context.read<WorkoutBloc>().add(
-                              AdjustSet(
-                                exerciseId: exercise.id,
-                                setId: selected.id,
-                                weightDelta: delta.toDouble(),
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: WorkoutValueControl(
-                            label: 'Reps',
-                            value: selected.reps,
-                            step: 1,
-                            enabled: !state.isSaving && !state.isReadOnly,
-                            onChanged: (value) =>
-                                update(selected.copyWith(reps: value.toInt())),
-                            onStep: (delta) => context.read<WorkoutBloc>().add(
-                              AdjustSet(
-                                exerciseId: exercise.id,
-                                setId: selected.id,
-                                repsDelta: delta.toInt(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    SpottrButton(
-                      text: selected.isCompleted
-                          ? 'Done editing'
-                          : 'Log set ${sets.indexOf(selected) + 1}',
-                      icon: const Icon(Icons.check_rounded),
-                      onPressed:
-                          state.isSaving ||
-                              state.isReadOnly ||
-                              selected.reps <= 0
-                          ? null
-                          : () {
-                              if (!selected.isCompleted) {
-                                context.read<WorkoutBloc>().add(
-                                  SetCompletion(
-                                    exerciseId: exercise.id,
-                                    setId: selected.id,
-                                    completed: true,
-                                  ),
-                                );
-                              }
-                              setState(() => _editingSet = null);
-                            },
-                    ),
-                    if (selected.reps <= 0)
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Text('Add reps to log this set.'),
-                      ),
-                  ],
+        if (!controls) ...[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  exercise.name,
+                  style: MediaQuery.textScalerOf(context).scale(1) > 1.3
+                      ? text.headlineMedium
+                      : text.headlineLarge,
                 ),
-        ),
-        if (restSeconds > 0)
-          Padding(
-            padding: const EdgeInsets.only(top: 16),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: context.colors.divider),
-                borderRadius: BorderRadius.circular(14),
               ),
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 12,
-                children: [
-                  Text(
-                    'Rest  ${restSeconds ~/ 60}:${(restSeconds % 60).toString().padLeft(2, '0')}',
-                    style: text.titleLarge,
+              IconButton(
+                tooltip: 'Edit exercise for this session',
+                onPressed: state.isSaving || state.isReadOnly
+                    ? null
+                    : () => _editExercise(
+                        exercise,
+                        sets.any((set) => set.isCompleted),
+                      ),
+                icon: const Icon(Icons.tune_rounded, size: 22),
+              ),
+            ],
+          ),
+          if (exercise.note.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(exercise.note, style: text.bodyMedium),
+            ),
+          if (sets.length > 1 && !sets.last.isCompleted)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: state.isSaving || state.isReadOnly
+                    ? null
+                    : () {
+                        setState(() => _editingSet = sets.last.id);
+                      },
+                icon: const Icon(Icons.last_page_rounded, size: 20),
+                label: const Text('Final set only'),
+              ),
+            ),
+          const SizedBox(height: 16),
+          for (final (index, set) in sets.indexed)
+            AnimatedContainer(
+              duration: MediaQuery.disableAnimationsOf(context)
+                  ? Duration.zero
+                  : const Duration(milliseconds: 180),
+              margin: const EdgeInsets.only(bottom: 4),
+              decoration: BoxDecoration(
+                color: set.id == selected?.id
+                    ? context.colors.primaryAccent.withValues(alpha: .08)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+                border: Border(
+                  left: BorderSide(
+                    color: set.id == selected?.id
+                        ? context.colors.primaryAccent
+                        : Colors.transparent,
+                    width: 3,
                   ),
-                  Row(
+                ),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  contentPadding: const EdgeInsets.only(left: 12),
+                  leading: SizedBox(
+                    width: 32,
+                    child: Text('${index + 1}', style: text.bodyMedium),
+                  ),
+                  title: Text(
+                    '${formatWeight(set.weight)} kg  ×  ${set.reps} reps',
+                  ),
+                  subtitle: Text(
+                    [
+                      if (set.isCompleted)
+                        'Logged'
+                      else if (set.id == selected?.id)
+                        'Current set'
+                      else
+                        'Not logged',
+                      if (set.isWarmup)
+                        'Warm-up'
+                      else if (set.isDropSet)
+                        'Drop set',
+                    ].join(' · '),
+                  ),
+                  trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      TextButton(
-                        onPressed: state.isSaving
+                      IconButton(
+                        tooltip: set.isCompleted
+                            ? 'Undo set ${index + 1}'
+                            : 'Log set ${index + 1}',
+                        onPressed:
+                            state.isSaving || state.isReadOnly || set.reps <= 0
                             ? null
                             : () => context.read<WorkoutBloc>().add(
-                                ChangeWorkoutRest(
-                                  until!.add(const Duration(seconds: 30)),
+                                SetCompletion(
+                                  exerciseId: exercise.id,
+                                  setId: set.id,
+                                  completed: !set.isCompleted,
                                 ),
                               ),
-                        child: const Text('+30s'),
+                        icon: AnimatedSwitcher(
+                          duration: MediaQuery.disableAnimationsOf(context)
+                              ? Duration.zero
+                              : const Duration(milliseconds: 160),
+                          child: Icon(
+                            set.isCompleted
+                                ? Icons.check_circle_rounded
+                                : Icons.circle_outlined,
+                            key: ValueKey(set.isCompleted),
+                            color: set.isCompleted
+                                ? context.colors.success
+                                : context.colors.secondaryText,
+                          ),
+                        ),
                       ),
-                      TextButton(
-                        onPressed: state.isSaving
-                            ? null
-                            : () => context.read<WorkoutBloc>().add(
-                                const ChangeWorkoutRest(null),
+                      PopupMenuButton<String>(
+                        tooltip: 'Set ${index + 1} options',
+                        enabled: !state.isSaving && !state.isReadOnly,
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            setState(() => _editingSet = set.id);
+                          }
+                          if (value == 'remove') {
+                            context.read<WorkoutBloc>().add(
+                              RemoveSet(exerciseId: exercise.id, setId: set.id),
+                            );
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text('Set removed'),
+                                action: SnackBarAction(
+                                  label: 'Undo',
+                                  onPressed: () {
+                                    context.read<WorkoutBloc>().add(
+                                      RestoreSet(
+                                        exerciseId: exercise.id,
+                                        setLog: set,
+                                        index: index,
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
-                        child: const Text('Skip'),
+                            );
+                          }
+                          if (value == 'warmup') {
+                            update(set.copyWith(isWarmup: !set.isWarmup));
+                          }
+                        },
+                        itemBuilder: (_) => [
+                          const PopupMenuItem(
+                            value: 'edit',
+                            child: Text('Edit values'),
+                          ),
+                          PopupMenuItem(
+                            value: 'warmup',
+                            child: Text(
+                              set.isWarmup
+                                  ? 'Mark as working set'
+                                  : 'Mark as warm-up',
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'remove',
+                            child: Text('Remove set'),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                  onTap: state.isReadOnly
+                      ? null
+                      : () => setState(() => _editingSet = set.id),
+                ),
               ),
             ),
+          TextButton.icon(
+            onPressed: state.isSaving || state.isReadOnly
+                ? null
+                : () => context.read<WorkoutBloc>().add(AddSet(exercise.id)),
+            icon: const Icon(Icons.add, size: 20),
+            label: const Text('Add a set'),
           ),
-        const SizedBox(height: 20),
-        for (final (index, set) in sets.indexed)
-          ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: SizedBox(
-              width: 32,
-              child: Text('${index + 1}', style: text.bodyMedium),
+          if (_selected < state.day.exercises.length - 1)
+            TextButton.icon(
+              onPressed: () => _select(_selected + 1),
+              icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+              label: const Text('Move to next exercise'),
             ),
-            title: Text('${formatWeight(set.weight)} kg  ×  ${set.reps} reps'),
-            subtitle: Text(
-              [
-                if (set.isCompleted)
-                  'Logged'
-                else if (set.id == selected?.id)
-                  'Current set'
-                else
-                  'Not logged',
-                if (set.isWarmup) 'Warm-up' else if (set.isDropSet) 'Drop set',
-              ].join(' · '),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  tooltip: set.isCompleted
-                      ? 'Undo set ${index + 1}'
-                      : 'Log set ${index + 1}',
-                  onPressed: state.isSaving || state.isReadOnly || set.reps <= 0
-                      ? null
-                      : () => context.read<WorkoutBloc>().add(
-                          SetCompletion(
-                            exerciseId: exercise.id,
-                            setId: set.id,
-                            completed: !set.isCompleted,
-                          ),
-                        ),
-                  icon: AnimatedSwitcher(
-                    duration: MediaQuery.disableAnimationsOf(context)
-                        ? Duration.zero
-                        : const Duration(milliseconds: 160),
-                    child: Icon(
-                      set.isCompleted
-                          ? Icons.check_circle_rounded
-                          : Icons.circle_outlined,
-                      key: ValueKey(set.isCompleted),
-                      color: set.isCompleted
-                          ? context.colors.success
-                          : context.colors.secondaryText,
-                    ),
-                  ),
+        ],
+        if (controls) ...[
+          if (restSeconds > 0)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(12, 0, 0, 0),
+                decoration: BoxDecoration(
+                  color: context.colors.primaryAccent.withValues(alpha: .08),
+                  borderRadius: BorderRadius.circular(14),
                 ),
-                PopupMenuButton<String>(
-                  tooltip: 'Set ${index + 1} options',
-                  enabled: !state.isSaving && !state.isReadOnly,
-                  onSelected: (value) {
-                    if (value == 'edit') {
-                      setState(() => _editingSet = set.id);
-                    }
-                    if (value == 'remove') {
-                      context.read<WorkoutBloc>().add(
-                        RemoveSet(exerciseId: exercise.id, setId: set.id),
-                      );
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: const Text('Set removed'),
-                          action: SnackBarAction(
-                            label: 'Undo',
-                            onPressed: () {
-                              context.read<WorkoutBloc>().add(
-                                RestoreSet(
-                                  exerciseId: exercise.id,
-                                  setLog: set,
-                                  index: index,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 12,
+                  children: [
+                    Text(
+                      'Rest  ${restSeconds ~/ 60}:${(restSeconds % 60).toString().padLeft(2, '0')}',
+                      style: text.titleMedium,
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton(
+                          onPressed: state.isSaving
+                              ? null
+                              : () => context.read<WorkoutBloc>().add(
+                                  ChangeWorkoutRest(
+                                    until!.add(const Duration(seconds: 30)),
+                                  ),
                                 ),
-                              );
-                            },
-                          ),
+                          child: const Text('+30s'),
                         ),
-                      );
-                    }
-                    if (value == 'warmup') {
-                      update(set.copyWith(isWarmup: !set.isWarmup));
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Text('Edit values'),
-                    ),
-                    PopupMenuItem(
-                      value: 'warmup',
-                      child: Text(
-                        set.isWarmup
-                            ? 'Mark as working set'
-                            : 'Mark as warm-up',
-                      ),
-                    ),
-                    const PopupMenuItem(
-                      value: 'remove',
-                      child: Text('Remove set'),
+                        TextButton(
+                          onPressed: state.isSaving
+                              ? null
+                              : () => context.read<WorkoutBloc>().add(
+                                  const ChangeWorkoutRest(null),
+                                ),
+                          child: const Text('Skip'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
+              ),
             ),
-            onTap: () => setState(() => _editingSet = set.id),
+          if (previous.any((set) => set.isCompleted))
+            PreviousSetSummary(
+              sets: previous,
+              setIndex: selected == null
+                  ? sets.length - 1
+                  : sets.indexOf(selected),
+            )
+          else
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Text(
+                '${exercise.targetSets} sets · ${exercise.targetReps} reps · ${exercise.restDurationSeconds}s rest',
+                style: text.bodyMedium,
+              ),
+            ),
+          const SizedBox(height: 4),
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.zero,
+            decoration: BoxDecoration(
+              color: context.colors.surface,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: selected == null
+                ? Column(
+                    children: [
+                      Icon(
+                        Icons.check_rounded,
+                        color: context.colors.success,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        sets.isEmpty
+                            ? 'No sets yet'
+                            : finalSetLogged
+                            ? 'Final set logged'
+                            : 'Exercise complete',
+                        style: text.titleLarge,
+                      ),
+                      if (finalSetLogged) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          '${sets.where((set) => set.isCompleted).length} of ${sets.length} sets recorded. Earlier unlogged sets stay out of your totals.',
+                          textAlign: TextAlign.center,
+                          style: text.bodyMedium,
+                        ),
+                        TextButton(
+                          onPressed: state.isSaving || state.isReadOnly
+                              ? null
+                              : () => setState(() {
+                                  _editingSet = sets
+                                      .firstWhere((set) => !set.isCompleted)
+                                      .id;
+                                }),
+                          child: const Text('Log earlier sets'),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      SpottrButton(
+                        text: sets.isEmpty
+                            ? 'Add a set'
+                            : _selected < state.day.exercises.length - 1
+                            ? 'Next exercise'
+                            : 'View workout',
+                        onPressed: state.isSaving || state.isReadOnly
+                            ? null
+                            : () {
+                                if (sets.isEmpty) {
+                                  context.read<WorkoutBloc>().add(
+                                    AddSet(exercise.id),
+                                  );
+                                  return;
+                                }
+                                if (_selected <
+                                    state.day.exercises.length - 1) {
+                                  _select(_selected + 1);
+                                } else {
+                                  _showOverview(state);
+                                }
+                              },
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      Wrap(
+                        alignment: WrapAlignment.spaceBetween,
+                        spacing: 12,
+                        runSpacing: 8,
+                        children: [
+                          Text(
+                            '${selected.isCompleted ? 'Editing set' : 'Set'} ${sets.indexOf(selected) + 1} of ${sets.length}',
+                            style: text.titleMedium,
+                          ),
+                          if (selected.isWarmup || selected.isDropSet)
+                            Text(
+                              selected.isWarmup ? 'Warm-up' : 'Drop set',
+                              style: text.labelMedium,
+                            ),
+                        ],
+                      ),
+                      if (!selected.isCompleted &&
+                          sets.length > 1 &&
+                          selected.id == sets.last.id &&
+                          sets
+                              .take(sets.length - 1)
+                              .any((set) => !set.isCompleted))
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            'Only this set will be recorded.',
+                            style: text.bodySmall,
+                          ),
+                        ),
+                      const SizedBox(height: 12),
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: WorkoutValueControl(
+                              compact: true,
+                              label: 'Weight · kg',
+                              value: selected.weight,
+                              step: 2.5,
+                              enabled: !state.isSaving && !state.isReadOnly,
+                              onChanged: (value) => update(
+                                selected.copyWith(weight: value.toDouble()),
+                              ),
+                              onStep: (delta) =>
+                                  context.read<WorkoutBloc>().add(
+                                    AdjustSet(
+                                      exerciseId: exercise.id,
+                                      setId: selected.id,
+                                      weightDelta: delta.toDouble(),
+                                    ),
+                                  ),
+                            ),
+                          ),
+                          Expanded(
+                            child: WorkoutValueControl(
+                              compact: true,
+                              label: 'Reps',
+                              value: selected.reps,
+                              step: 1,
+                              enabled: !state.isSaving && !state.isReadOnly,
+                              onChanged: (value) => update(
+                                selected.copyWith(reps: value.toInt()),
+                              ),
+                              onStep: (delta) =>
+                                  context.read<WorkoutBloc>().add(
+                                    AdjustSet(
+                                      exerciseId: exercise.id,
+                                      setId: selected.id,
+                                      repsDelta: delta.toInt(),
+                                    ),
+                                  ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SpottrButton(
+                        text: selected.isCompleted
+                            ? 'Done editing'
+                            : 'Log set ${sets.indexOf(selected) + 1}',
+                        icon: const Icon(Icons.check_rounded),
+                        onPressed:
+                            state.isSaving ||
+                                state.isReadOnly ||
+                                selected.reps <= 0
+                            ? null
+                            : () {
+                                if (!selected.isCompleted) {
+                                  context.read<WorkoutBloc>().add(
+                                    SetCompletion(
+                                      exerciseId: exercise.id,
+                                      setId: selected.id,
+                                      completed: true,
+                                    ),
+                                  );
+                                }
+                                setState(() => _editingSet = null);
+                              },
+                      ),
+                      if (selected.reps <= 0)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Text('Add reps to log this set.'),
+                        ),
+                    ],
+                  ),
           ),
-        TextButton.icon(
-          onPressed: state.isSaving || state.isReadOnly
-              ? null
-              : () => context.read<WorkoutBloc>().add(AddSet(exercise.id)),
-          icon: const Icon(Icons.add, size: 20),
-          label: const Text('Add a set'),
-        ),
-        if (_selected < state.day.exercises.length - 1)
-          TextButton.icon(
-            onPressed: () => _select(_selected + 1),
-            icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-            label: const Text('Move to next exercise'),
-          ),
+        ],
       ],
     );
   }

@@ -41,6 +41,12 @@ Accounts, social feeds, nutrition, and AI coaching are outside the proposed firs
 
 - Prefer one exercise in focus with a compact overview and free movement between exercises.
 - Suggested values become completed sets only after explicit confirmation.
+- Final-set-only logging is a per-exercise shortcut to select the final existing set for entry.
+  Selecting it never logs anything. Earlier sets remain unchanged, and only explicitly recorded
+  sets contribute to volume/history. When the final set is recorded with earlier gaps, show
+  "Final set logged" with Next exercise and Log earlier sets; do not claim the exercise is complete.
+  Derive this state from saved set completion flags so it survives resume without a new preference
+  or migration. Original set positions remain in saved history. Undo and out-of-order logging remain available.
 - Prefer session-only exercise changes, with an explicit action to update the plan.
 - Decide whether notes belong to the shared exercise, a plan entry, or both; avoid ambiguous inheritance.
 - Give exercises stable identity across plans. Preserve session names and context when plans change.

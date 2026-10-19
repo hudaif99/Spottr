@@ -1,5 +1,32 @@
 # Spottr design guide
 
+## Active Workout refinement — 19 October 2026
+
+The user accepted the visual direction, especially the curved top of the bottom logging panel,
+and requested direct Flutter refinement with no more mockups. Preserve that silhouette and the
+scoped palette. Finish is quieter; the selected set has an accent edge as well as its status label.
+Final set only appears below the exercise note when a final unlogged set exists. It selects the
+last set without completing it. The editor explains that only this set will be recorded. After
+logging, show the actual recorded count, Next exercise and Log earlier sets; retain all rows.
+This is an optional per-exercise shortcut, not a global tracking mode or a claim that unlogged
+sets were performed. Existing numeric dialogs, persistence and rest behavior remain intact.
+
+## Direction under review — 18 October 2026
+
+The user accepted the prototype flow and authorized creative development of the Active Workout
+anchor. The first Flutter visual pass now uses scoped chalk/graphite/cobalt tokens in
+`lib/core/theme/workout_theme.dart`, bundled Outfit with stronger exercise titles and tabular
+values, a bottom logging surface, quieter overview controls and animated selection/progress.
+This supersedes the green specification for Active Workout only. Other screens retain the baseline
+below until this anchor receives visual review. No storage or workout-rule changes are involved.
+
+Keep previous performance and rest with the logging controls. Finish is in the header. Compact
+portrait retains the primary action; large text uses scrollable content and controls. Tablet keeps
+an overview beside a constrained focused area. Selection/progress/check transitions take 160–220ms
+and honor reduced motion. Numeric entry still uses the existing validated dialogs: the prototype's
+inline keyboard interaction, repeat shortcut and progression guidance remain a separate follow-up.
+Do not describe this visual slice as completing every prototype interaction.
+
 ## Current visual specification
 
 On 13 October 2026 the user rejected the latest Stitch concepts and chose to
